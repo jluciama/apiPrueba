@@ -1,25 +1,36 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, HiddenField
-from wtforms.validators import Length, EqualTo, Email, DataRequired, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+import re
 from app.models import User
 
-
 class RegisterForm(FlaskForm):
-    def validate_username(self, username_to_check):
-        user = User.query.filter_by(username=username_to_check.data).first()
+    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=30)])
+    email_address = StringField('Email', validators=[DataRequired(), Email(), Length(min=1, max=50)])
+    password1 = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password1')])
+    submit = SubmitField('Register')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
         if user:
-            raise ValidationError('Username already exists! Please try a different username')
+            raise ValidationError('Username already registered. Please choose a different one.')
 
-    def validate_email_address(self, email_address_to_check):
-        email_address = User.query.filter_by(email_address=email_address_to_check.data).first()
-        if email_address:
-            raise ValidationError('Email Address already exists! Please try a different email address')
+    def validate_email_address(self, email_address):
+        user = User.query.filter_by(email_address=email_address.data).first()
+        if user:
+            raise ValidationError('Email already registered. Please use a different one.')
+    
+    def validate_password1(self, password1):
+        password = password1.data
+        if len(password) < 6:
+            raise ValidationError('Password must be at least 6 characters long.')
+        if not re.search(r'[A-Z]', password) or not re.search(r'[0-9]', password) or not re.search(r'[a-z]', password) or not re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password):
+            raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
 
-    username = StringField(label='User Name:', validators=[Length(min=1, max=30), DataRequired()])
-    email_address = StringField(label='Email Address:', validators=[Email(), DataRequired()])
-    password1 = PasswordField(label='Password:', validators=[Length(min=6), DataRequired()])
-    password2 = PasswordField(label='Confirm Password:', validators=[EqualTo('password1'), DataRequired()])
-    submit = SubmitField(label='Create Account')
+    def validate_password2(self, password2):
+        if self.password1.data != password2.data:
+            raise ValidationError('Passwords do not match.')
 
 
 class LoginForm(FlaskForm):
@@ -27,13 +38,36 @@ class LoginForm(FlaskForm):
     password = PasswordField(label='Password:', validators=[DataRequired()])
     submit = SubmitField(label='Sign in')
 
+class ForgotPasswordForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=30)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=1, max=50)])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('new_password')])
+    submit = SubmitField('Reset Password')
+
+    def validate_username(self, username_field):
+        print("VALIDATING USERNAME")
+        username = username_field.data
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            raise ValidationError('User does not exist.')
+
+    def validate_email(self, email_field):
+        email = email_field.data
+        username = self.username.data
+        user = User.query.filter_by(username=username, email_address=email).first()
+        if not user:
+            raise ValidationError('User with provided email does not exist.')
+
 class CreatePostForm(FlaskForm):
     title = StringField(label='Title', validators=[DataRequired()])
-    description = StringField(label='Description', validators=[DataRequired()])
+    body = StringField(label='Body', validators=[DataRequired()])
     submit = SubmitField(label='Create a post!')
 
 class EditPostForm(FlaskForm):
-    submit = SubmitField(label='Edit a post!')
+    title = StringField('Title', validators=[DataRequired()])
+    body = TextAreaField('Body', validators=[DataRequired()])
+    submit = SubmitField('Edit a post!')
 
 class DeletePostForm(FlaskForm):
     submit = SubmitField(label='Delete a post!')

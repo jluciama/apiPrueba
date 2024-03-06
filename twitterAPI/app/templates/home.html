@@ -22,8 +22,8 @@
                         {{ create_post_form.title(class="form-control") }}
                     </div>
                     <div class="form-group">
-                        {{ create_post_form.description.label(class="form-control-label") }}
-                        {{ create_post_form.description(class="form-control") }}
+                        {{ create_post_form.body.label(class="form-control-label") }}
+                        <textarea name="body" class="form-control"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Create Post</button>
                 </form>
@@ -39,8 +39,8 @@
                     {% for post in posts %}
                         <li class="list-group-item" style="color:black">
                             <h4>{{ post.title }}</h4>
-                            <p>{{ post.description }}</p>
-                            <p><small>ID: {{ post.id }}</small></p>
+                            <p>{{ post.body }}</p>
+                            <p><small>Owner: {{ post.owned_user.username }}</small></p>
                             {% if post.owned_user.id == current_user.id %}
                                 <a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn btn-primary btn-sm">Edit</a>
                                 <a href="{{ url_for('delete_post', post_id=post.id) }}" class="btn btn-danger btn-sm">Delete</a>

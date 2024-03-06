@@ -24,8 +24,12 @@
             </div>
 
             <div class="checkbox mb-3">
-               <h6>Do not have an account?</h6>
-               <a class="btn btn-sm btn-secondary" href="{{ url_for('register_page') }}">Register</a>
+                <a class="btn btn-sm btn-secondary" href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+            </div>
+
+            <div class="checkbox mb-3">
+                <h6>Do not have an account?</h6>
+                <a class="btn btn-sm btn-secondary" href="{{ url_for('register_page') }}">Register</a>
             </div>
 
             <button type="submit" class="btn btn-lg btn-block btn-primary">Login</button>
