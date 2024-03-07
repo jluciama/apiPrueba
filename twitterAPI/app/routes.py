@@ -3,6 +3,7 @@ from flask import render_template, redirect, url_for, flash, request, abort
 from app.models import User, Post
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, DeletePostForm, ForgotPasswordForm
 from flask_login import login_user, logout_user, login_required, current_user
+from sqlalchemy import or_
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -91,8 +92,14 @@ def home_page():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)  # Default to 10 entries per page
 
-    posts = Post.query.paginate(page=page, per_page=per_page)
-    
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        posts = Post.query.filter(or_(Post.title.contains(search_query), Post.body.contains(search_query))) \
+            .paginate(page=page, per_page=per_page)
+    else:
+        posts = Post.query.paginate(page=page, per_page=per_page)
+
     return render_template('home.html', posts=posts, create_post_form=create_post_form, 
                            edit_post_form=edit_post_form, delete_post_form=delete_post_form)
 
