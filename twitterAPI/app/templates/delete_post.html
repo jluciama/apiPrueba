@@ -8,12 +8,23 @@
             <div class="col-md-8 offset-md-2">
                 <h2>Delete Post</h2>
                 <p>Are you sure you want to delete this post?</p>
-                <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}">
+                <form id="deleteForm" action="{{ url_for('delete_post', post_id=post.id) }}" method="POST">
                     {{ form.hidden_tag() }}
-                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                    <a href="{{ url_for('home_page') }}" class="btn btn-secondary">Cancel</a>
-                </form>                
+                    <button type="submit" class="btn btn-danger" id="confirmDelete">Yes</button>
+                    <button type="button" class="btn btn-secondary" id="cancelDelete">No</button>
+                </form>
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById("cancelDelete").addEventListener("click", function() {
+            // Close the popup or do nothing
+        });
+
+        document.getElementById("confirmDelete").addEventListener("click", function() {
+            if (confirm("Are you sure you want to delete this post?")) {
+                document.getElementById("deleteForm").submit();
+            }
+        });
+    </script>
 {% endblock %}

@@ -19,6 +19,7 @@ class Post(db.Model):
     title = db.Column(db.String(), nullable=False)
     body = db.Column(db.String(), nullable=False)
     owned_user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
+    tags = db.Column(db.String())
 
     def __repr__(self):
         return self.title

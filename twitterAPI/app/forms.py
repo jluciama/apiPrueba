@@ -50,7 +50,6 @@ class ForgotPasswordForm(FlaskForm):
     submit = SubmitField('Reset Password')
 
     def validate_username(self, username_field):
-        print("VALIDATING USERNAME")
         username = username_field.data
         user = User.query.filter_by(username=username).first()
         if not user:
@@ -82,11 +81,13 @@ class ForgotPasswordForm(FlaskForm):
 class CreatePostForm(FlaskForm):
     title = StringField(label='Title', validators=[DataRequired()])
     body = StringField(label='Body', validators=[DataRequired()])
+    tags = StringField('Tags (optional)')
     submit = SubmitField(label='Create a post!')
 
 class EditPostForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     body = TextAreaField('Body', validators=[DataRequired()])
+    tags = StringField('Tags (optional)')
     submit = SubmitField('Edit a post!')
 
 class DeletePostForm(FlaskForm):

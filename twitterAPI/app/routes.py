@@ -3,7 +3,7 @@ from flask import render_template, redirect, url_for, flash, request, abort
 from app.models import User, Post
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, DeletePostForm, ForgotPasswordForm
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -93,28 +93,52 @@ def home_page():
     per_page = request.args.get('per_page', 10, type=int)  # Default to 10 entries per page
 
     search_query = request.args.get('search', '')
+    tag_search = request.args.get('tag_search', '')
 
-    if search_query:
-        posts = Post.query.filter(or_(Post.title.contains(search_query), Post.body.contains(search_query))) \
+    if search_query and tag_search:
+        # If both search and tag_search parameters are provided, search by both
+        posts = Post.query.filter(or_(Post.title.contains(search_query), 
+                                      Post.body.contains(search_query),
+                                      Post.tags.like(f"%{tag_search}%"))) \
             .paginate(page=page, per_page=per_page)
+    elif search_query:
+        # If only search parameter is provided, search normally
+        posts = Post.query.filter(or_(Post.title.contains(search_query), 
+                                      Post.body.contains(search_query))) \
+            .paginate(page=page, per_page=per_page)
+    elif tag_search:
+        # If only tag_search parameter is provided, search by tag
+        posts = Post.query.filter(Post.tags.like(f"%{tag_search}%")).paginate(page=page, per_page=per_page)
     else:
+        # If neither search nor tag_search parameter is provided, fetch all posts
         posts = Post.query.paginate(page=page, per_page=per_page)
 
     return render_template('home.html', posts=posts, create_post_form=create_post_form, 
                            edit_post_form=edit_post_form, delete_post_form=delete_post_form)
 
-@app.route('/create_post', methods=['POST'])
+@app.route('/search_by_tag/<tag_name>')
+def search_by_tag(tag_name):
+    posts = Post.query.filter(Post.tags.any(tag_name)).paginate(page=1, per_page=10)
+    return render_template('home.html', posts=posts)
+
+@app.route('/create_post', methods=['GET', 'POST'])
 @login_required
 def create_post():
     form = CreatePostForm()
     if form.validate_on_submit():
-        new_post = Post(title=form.title.data, body=form.body.data, owned_user=current_user)
+        new_post = Post(
+            title=form.title.data,
+            body=form.body.data,
+            owned_user=current_user
+        )
+        tags = [tag.strip() for tag in form.tags.data.split('#') if tag.strip()]
+        new_post.tags = ','.join(tags)  # Convert list of tags to a comma-separated string
+
         db.session.add(new_post)
         db.session.commit()
         flash('Post created successfully!', category='success')
-    else:
-        flash('Error creating post. Please try again.', category='danger')
-    return redirect(url_for('home_page'))
+        return redirect(url_for('home_page'))
+    return render_template('create_post.html', form=form)
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
@@ -122,28 +146,33 @@ def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     if post.owned_user != current_user:
         abort(403)
-    form = EditPostForm()
+    form = EditPostForm(obj=post)
     if form.validate_on_submit():
-        post.title = form.title.data
-        post.body = form.body.data
+        form.populate_obj(post)
+        if form.tags.data:
+            post.tags.clear()
+            tags = form.tags.data.split(',')
+            for tag in tags:
+                post.tags.append(tag.strip())
         db.session.commit()
         flash('Post updated successfully!', category='success')
         return redirect(url_for('home_page'))
-    elif request.method == 'GET':
-        form.title.data = post.title
-        form.body.data = post.body
     return render_template('edit_post.html', form=form)
 
-@app.route('/delete_post/<int:post_id>', methods=['GET', 'POST'])
+@app.route('/delete_post/<int:post_id>', methods=['POST', 'DELETE'])
 @login_required
 def delete_post(post_id):
-    post = Post.query.get_or_404(post_id)
-    if post.owned_user != current_user:
-        abort(403)
-    db.session.delete(post)
-    db.session.commit()
-    flash('Post deleted successfully!', category='success')
-    return redirect(url_for('home_page'))
+    if request.method in ['POST', 'DELETE']:
+        post = Post.query.get_or_404(post_id)
+        if post.owned_user != current_user:
+            abort(403)
+        db.session.delete(post)
+        db.session.commit()
+        flash('Post deleted successfully!', category='success')
+        return redirect(url_for('home_page'))
+    else:
+        abort(405)  # Method Not Allowed
+
 
 @app.route('/logout')
 def logout_page():
