@@ -3,8 +3,6 @@ from flask import render_template, redirect, url_for, flash, request, abort
 from app.models import User, Post
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, DeletePostForm, ForgotPasswordForm
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy.exc import IntegrityError
-import secrets
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -26,16 +24,12 @@ def login_page():
     form = LoginForm()
     if form.validate_on_submit():
         attempted_user = User.query.filter_by(username=form.username.data).first()
-        if attempted_user:
-            if attempted_user.check_password(form.password.data):
-                login_user(attempted_user)
-                flash(f'Success! You are now logged in as: {attempted_user.username}', category='success')
-                next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('home_page'))
-            else:
-                flash('Password is incorrect! Please try again', category='danger')
-        else:
-            flash('User does not exist! Please check your username', category='danger')
+        if attempted_user and attempted_user.check_password(form.password.data):
+            login_user(attempted_user)
+            flash(f'Success! You are now logged in as: {attempted_user.username}', category='success')
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('home_page'))
+        flash('There was an error logging in. Please try again.', category='danger')
     return render_template('login.html', form=form)
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -44,7 +38,7 @@ def forgot_password():
     if form.validate_on_submit():
         username = form.username.data
         email = form.email.data
-        new_password = form.new_password.data
+        new_password = form.password1.data
 
         user = User.query.filter_by(username=username, email_address=email).first()
         if user:
@@ -55,20 +49,6 @@ def forgot_password():
         else:
             flash('User with provided credentials does not exist.', 'danger')
     return render_template('forgot_password.html', form=form)
-
-@app.route('/api/reset_password/<token>', methods=['POST'])
-def reset_password(token):
-    user = User.query.filter_by(reset_password_token=token).first()
-    if user:
-        new_password = request.form.get('new_password')
-        user.password = new_password
-        user.reset_password_token = None
-        db.session.commit()
-        flash('Your password has been successfully updated. Please log in with your new password.', 'success')
-        return redirect(url_for('login_page'))
-    else:
-        flash('Invalid or expired token. Please try again.', 'danger')
-        return redirect(url_for('login_page'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register_page():
@@ -81,24 +61,23 @@ def register_page():
         username = form.username.data
         email = form.email_address.data
         password = form.password1.data
-
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists! Please try a different username.', 'danger')
-            return redirect(url_for('register_page'))
-        if User.query.filter_by(email_address=email).first():
-            flash('Email Address already exists! Please try a different email address.', 'danger')
-            return redirect(url_for('register_page'))
-
+        
         try:
-            user = User(username=username, email_address=email, password=password)
+            user = User(username=username, email_address=email)
+            user.set_password(password)
             db.session.add(user)
             db.session.commit()
             flash('Account created successfully! You can now log in.', 'success')
             return redirect(url_for('login_page'))
-        except IntegrityError:
-            db.session.rollback()
+        except Exception as e:
             flash('An unexpected error occurred. Please try again later.', 'danger')
-            return redirect(url_for('register_page'))
+            app.logger.error(f"Error while registering user: {str(e)}")
+            return render_template('register.html', form=form)
+
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'danger')
 
     return render_template('register.html', form=form)
 
@@ -109,12 +88,13 @@ def home_page():
     edit_post_form = EditPostForm()
     delete_post_form = DeletePostForm()
 
-    if request.method == "GET":
-        posts = Post.query.all()
-        return render_template('home.html', posts=posts, create_post_form=create_post_form, 
-                               edit_post_form=edit_post_form, delete_post_form=delete_post_form)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)  # Default to 10 entries per page
 
-    return render_template('home.html')
+    posts = Post.query.paginate(page=page, per_page=per_page)
+    
+    return render_template('home.html', posts=posts, create_post_form=create_post_form, 
+                           edit_post_form=edit_post_form, delete_post_form=delete_post_form)
 
 @app.route('/create_post', methods=['POST'])
 @login_required

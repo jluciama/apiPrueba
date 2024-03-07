@@ -5,10 +5,10 @@ import re
 from app.models import User
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=30)])
-    email_address = StringField('Email', validators=[DataRequired(), Email(), Length(min=1, max=50)])
-    password1 = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
-    password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password1')])
+    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
+    email_address = StringField('Email', validators=[DataRequired(), Email()])
+    password1 = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Register')
 
     def validate_username(self, username):
@@ -20,18 +20,22 @@ class RegisterForm(FlaskForm):
         user = User.query.filter_by(email_address=email_address.data).first()
         if user:
             raise ValidationError('Email already registered. Please use a different one.')
-    
+
     def validate_password1(self, password1):
         password = password1.data
+
         if len(password) < 6:
             raise ValidationError('Password must be at least 6 characters long.')
-        if not re.search(r'[A-Z]', password) or not re.search(r'[0-9]', password) or not re.search(r'[a-z]', password) or not re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password):
+
+        if not (re.search(r'[A-Z]', password) and
+                re.search(r'[a-z]', password) and
+                re.search(r'[0-9]', password) and
+                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password)):
             raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
 
     def validate_password2(self, password2):
         if self.password1.data != password2.data:
             raise ValidationError('Passwords do not match.')
-
 
 class LoginForm(FlaskForm):
     username = StringField(label='User Name:', validators=[DataRequired()])
@@ -39,10 +43,10 @@ class LoginForm(FlaskForm):
     submit = SubmitField(label='Sign in')
 
 class ForgotPasswordForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=30)])
-    email = StringField('Email', validators=[DataRequired(), Email(), Length(min=1, max=50)])
-    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('new_password')])
+    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password1 = PasswordField('New Password', validators=[DataRequired()])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password1')])
     submit = SubmitField('Reset Password')
 
     def validate_username(self, username_field):
@@ -58,6 +62,22 @@ class ForgotPasswordForm(FlaskForm):
         user = User.query.filter_by(username=username, email_address=email).first()
         if not user:
             raise ValidationError('User with provided email does not exist.')
+    
+    def validate_passwords(self, password1_field, password2_field):
+        password1 = password1_field.data
+        password2 = password2_field.data
+
+        if len(password1) < 6 or len(password2) < 6:
+            raise ValidationError('Passwords must be at least 6 characters long.')
+
+        if not (re.search(r'[A-Z]', password1) and
+                re.search(r'[a-z]', password1) and
+                re.search(r'[0-9]', password1) and
+                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password1)):
+            raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
+
+        if password1 != password2:
+            raise ValidationError('Passwords do not match.')
 
 class CreatePostForm(FlaskForm):
     title = StringField(label='Title', validators=[DataRequired()])
