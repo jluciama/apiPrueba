@@ -4,6 +4,7 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 import re
 from app.models import User
 
+
 class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
     email_address = StringField('Email', validators=[DataRequired(), Email()])
@@ -37,10 +38,12 @@ class RegisterForm(FlaskForm):
         if self.password1.data != password2.data:
             raise ValidationError('Passwords do not match.')
 
+
 class LoginForm(FlaskForm):
     username = StringField(label='User Name:', validators=[DataRequired()])
     password = PasswordField(label='Password:', validators=[DataRequired()])
     submit = SubmitField(label='Sign in')
+
 
 class ForgotPasswordForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
@@ -78,17 +81,20 @@ class ForgotPasswordForm(FlaskForm):
         if password1 != password2:
             raise ValidationError('Passwords do not match.')
 
+
 class CreatePostForm(FlaskForm):
     title = StringField(label='Title', validators=[DataRequired()])
     body = StringField(label='Body', validators=[DataRequired()])
     tags = StringField('Tags (optional)')
     submit = SubmitField(label='Create a post!')
 
+
 class EditPostForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     body = TextAreaField('Body', validators=[DataRequired()])
     tags = StringField('Tags (optional)')
     submit = SubmitField('Edit a post!')
+
 
 class DeletePostForm(FlaskForm):
     submit = SubmitField(label='Delete a post!')
