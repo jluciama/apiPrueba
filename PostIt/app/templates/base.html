@@ -83,61 +83,56 @@
     };
 
     document.addEventListener('DOMContentLoaded', function() {
+
         const alerts = document.querySelectorAll('.alert');
-        let totalHeight = 0;
+
+        function adjustAlertPositions() {
+            let topOffset = 0;
+            alerts.forEach(function(alert) {
+                alert.style.top = topOffset + 'px';
+                topOffset += alert.offsetHeight + 10;
+            });
+        }
+
+        adjustAlertPositions();
 
         function closeAlert(alert) {
             alert.style.opacity = '0';
             setTimeout(function() {
                 alert.remove();
-                totalHeight -= alert.offsetHeight + 10;
-                updateAlertPositions();
-            }, 3000);
+            }, 2000);
         }
 
         function startFadeOut(alert) {
             alert.style.opacity = '0';
-            alert.style.transition = 'opacity 3s ease-in-out';
+            alert.style.transition = 'opacity 2s ease-in-out';
             setTimeout(function() {
                 closeAlert(alert);
-            }, 3000);
+            }, 2000);
         }
 
-        function resetTimers(alert) {
-            clearTimeout(alert.timeoutId);
-            clearTimeout(alert.fadeOutTimeoutId);
-            alert.style.opacity = '1';
-            alert.style.transition = 'none';
-            alert.timeoutId = setTimeout(function() {
-                startFadeOut(alert);
-            }, 2000); // Adjusted timeout duration to 2000 milliseconds (2 seconds)
-        }
-
-        function updateAlertPositions() {
-            let heightOffset = 0;
-            alerts.forEach(function(alert) {
-                alert.style.top = `${heightOffset}px`;
-                heightOffset += alert.offsetHeight + 10;
-            });
-        }
-
-        alerts.forEach(function(alert, index) {
-            alert.style.opacity = '0';
-            alert.style.transition = 'opacity 3s ease-in-out';
-            alert.style.top = `${totalHeight}px`;
-            totalHeight += alert.offsetHeight + 10;
-            alert.timeoutId = setTimeout(function() {
-                startFadeOut(alert);
-            }, 3000);
-
-            alert.addEventListener('mouseenter', function() {
-                resetTimers(alert);
-            });
-
-            alert.addEventListener('mouseleave', function() {
-                alert.fadeOutTimeoutId = setTimeout(function() {
+        alerts.forEach(function(alert) {
+            let timeoutId;
+            setTimeout(function() {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 2s ease-in-out';
+                timeoutId = setTimeout(function() {
                     startFadeOut(alert);
-                }, 3000);
+                }, 2000);
+            }, 3000);
+            
+            // Reset countdown on hover
+            alert.addEventListener('mouseenter', function() {
+                clearTimeout(timeoutId);
+                alert.style.opacity = '1';
+                alert.style.transition = 'none';
+            });
+
+            // Restart countdown when not hovering
+            alert.addEventListener('mouseleave', function() {
+                timeoutId = setTimeout(function() {
+                    startFadeOut(alert);
+                }, 2000);
             });
 
             alert.querySelector('.close').addEventListener('click', function() {
@@ -163,9 +158,7 @@
         width: fit-content;
         padding: 10px 30px;
         text-align: center;
-    }
-    .alert-wide {
-        max-width: 1000px;
+        margin-top: 10px;
     }
     .close {
     position: absolute;
