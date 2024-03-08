@@ -25,7 +25,7 @@
     <div class="container mt-2">
         <div class="row">
             <div class="col-md-8 offset-md-2 text-center">
-                <form method="GET" action="{{ url_for('home_page') }}" id="searchForm" class="form-inline">
+                <form method="GET" action="{{ url_for('home_page') }}" id="searchForm" class="form-inline justify-content-center">
                     <div class="form-group mb-2">
                         <input type="text" class="form-control" id="searchInput" name="search" placeholder="Search within posts" value="{{ request.args.get('search', '') }}">
                     </div>
@@ -33,10 +33,12 @@
                         <input type="text" class="form-control" id="tagSearchInput" name="tag_search" placeholder="Search by tag" value="{{ request.args.get('tag_search', '') }}">
                     </div>
                     <button type="submit" class="btn btn-primary mb-2">Search</button>
-                    {% if 'search' in request.args or 'tag_search' in request.args %}
-                        <button type="submit" class="btn btn-primary mb-2 ml-2">End Search</button>
-                    {% endif %}
                 </form>
+                {% if 'search' in request.args or 'tag_search' in request.args %}
+                    <div class="text-center mt-2">
+                        <a href="{{ url_for('home_page') }}" class="btn btn-primary mb-2">End Search</a>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
