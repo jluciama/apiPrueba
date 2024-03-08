@@ -1,5 +1,6 @@
 from app import db, bcrypt
 from flask_login import UserMixin
+from datetime import datetime
 
 # Association table for likes
 likes = db.Table('likes',
@@ -35,6 +36,7 @@ class Post(db.Model):
     tags = db.Column(db.String())
     likes_count = db.Column(db.Integer(), default=0)
     dislikes_count = db.Column(db.Integer(), default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Define relationships with users for likes and dislikes
     liked_users = db.relationship('User', secondary=likes, backref=db.backref('liked_posts', lazy='dynamic'))

@@ -45,6 +45,16 @@
     </div>
 </body>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var confirmPasswordInput = document.getElementById('password2');
+        confirmPasswordInput.addEventListener('paste', function(event) {
+            event.preventDefault();
+            alert('Pasting into this field is not allowed.');
+        });
+    });
+</script>
+
 <style>
     .form-control {
         height: 50px;

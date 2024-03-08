@@ -4,7 +4,7 @@
 {% endblock %}
 {% block content %}
     <div class="position-relative overflow-hidden p-3 p-md-5 m-md-3 text-center bg-dark" style="color:white">
-        <div class="col-md-5 p-lg-5 mx-auto my-5">
+        <div class="col-md-5 p-lg-5 mx-auto my-1">
             <h1 class="display-4 font-weight-normal">Postinger</h1>
         </div>
         <div class="product-device box-shadow d-none d-md-block"></div>
@@ -25,20 +25,52 @@
     <div class="container mt-2">
         <div class="row">
             <div class="col-md-8 offset-md-2 text-center">
-                <form method="GET" action="{{ url_for('home_page') }}" id="searchForm" class="form-inline justify-content-center">
+                <!-- First row: Search within posts and search by tag -->
+                <form method="GET" action="{{ url_for('home_page') }}" id="searchForm" class="form-inline justify-content-center mb-3">
+                    <!-- Search within posts input field -->
                     <div class="form-group mb-2">
                         <input type="text" class="form-control" id="searchInput" name="search" placeholder="Search within posts" value="{{ request.args.get('search', '') }}">
                     </div>
+                    <!-- Search by tag input field -->
                     <div class="form-group mx-sm-3 mb-2">
                         <input type="text" class="form-control" id="tagSearchInput" name="tag_search" placeholder="Search by tag" value="{{ request.args.get('tag_search', '') }}">
                     </div>
-                    <button type="submit" class="btn btn-primary mb-2">Search</button>
+                    <div class="form-inline justify-content-center">
+                        <button type="submit" class="btn btn-primary mb-2">Search</button>
+                    </div>
                 </form>
+                <!-- Second row: Order by and ascending/descending -->
+                <form method="GET" action="{{ url_for('home_page') }}" id="orderByForm" class="form-inline justify-content-center">
+                    <!-- Order by dropdown menu -->
+                    <div class="form-group mb-2">
+                        <select class="form-control" id="orderBy" name="order_by">
+                            <option value="" {% if not order_by %}selected{% endif %}>Order By</option>
+                            <option value="likes" {% if order_by == 'likes' %}selected{% endif %}>Likes</option>
+                            <option value="date" {% if order_by == 'date' %}selected{% endif %}>Date</option>
+                            <option value="dislikes" {% if order_by == 'dislikes' %}selected{% endif %}>Dislikes</option>
+                        </select>
+                    </div>
+                    <!-- Ascending/descending dropdown menu -->
+                    <div class="form-group mx-sm-3 mb-2">
+                        <select class="form-control" id="orderDirection" name="order_direction">
+                            <option value="" {% if not order_direction %}selected{% endif %}>Ascending/Descending</option>
+                            <option value="asc" {% if order_direction == 'asc' %}selected{% endif %}>Ascending</option>
+                            <option value="desc" {% if order_direction == 'desc' %}selected{% endif %}>Descending</option>
+                        </select>
+                    </div>
+                    <!-- Preserve search parameters -->
+                    <input type="hidden" name="search" value="{{ search_query }}">
+                    <input type="hidden" name="tag_search" value="{{ tag_search }}">
+                    <!-- Submit button -->
+                    <button type="submit" class="btn btn-primary mb-2">Apply Order</button>
+                </form>
+                <!-- Third Row -->
                 {% if 'search' in request.args or 'tag_search' in request.args %}
                     <div class="text-center mt-2">
                         <a href="{{ url_for('home_page') }}" class="btn btn-primary mb-2">End Search</a>
                     </div>
                 {% endif %}
+                
             </div>
         </div>
     </div>
@@ -64,7 +96,18 @@
                                 </small></p>
                             {% endif %}
                             <!-- Owner Information -->
-                            <p><small>Owner: {{ post.owned_user.username }}</small></p>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="mb-0"><small>Owner: {{ post.owned_user.username }}</small></p>
+                                </div>
+                            </div>
+
+                            <!-- Date of Creation -->
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="mb-0"><small>Created on: {{ post.created_at.strftime('%d-%m-%Y, at %H:%M:%S') }}</small></p>
+                                </div>
+                            </div>
                             <!-- Post Options -->
                             {% if post.owned_user.id == current_user.id %}
                                 <div class="btn-group" role="group" aria-label="Post Actions">

@@ -3,7 +3,7 @@ from flask import render_template, redirect, url_for, flash, request, abort
 from app.models import User, Post
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, DeletePostForm, ForgotPasswordForm
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import or_, func
+from sqlalchemy import or_, asc, desc, func
 
 
 @login_manager.user_loader
@@ -53,6 +53,12 @@ def forgot_password():
             return redirect(url_for('login_page'))
         else:
             flash('User with provided credentials does not exist.', 'danger')
+    
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'danger')
+
     return render_template('forgot_password.html', form=form)
 
 
@@ -101,6 +107,11 @@ def home_page():
     search_query = request.args.get('search', '')
     tag_search = request.args.get('tag_search', '')
 
+    # Sorting options
+    order_by = request.args.get('order_by', 'date')
+    order_direction = request.args.get('order_direction', 'desc')  # Default to descending order
+
+    # Start with all posts query
     posts_query = Post.query
 
     # Split search query for post content and tags
@@ -122,11 +133,21 @@ def home_page():
             )
         )
 
-    # Fetch posts based on the combined search queries
+    # Apply sorting
+    if order_by == 'date':
+        posts_query = posts_query.order_by(Post.created_at.desc() if order_direction == 'desc' else Post.created_at.asc())
+    elif order_by == 'likes':
+        posts_query = posts_query.order_by(Post.likes_count.desc() if order_direction == 'desc' else Post.likes_count.asc())
+    elif order_by == 'dislikes':
+        posts_query = posts_query.order_by(Post.dislikes_count.desc() if order_direction == 'desc' else Post.dislikes_count.asc())
+
+    # Fetch posts based on the combined search queries and sorting
     posts = posts_query.paginate(page=page, per_page=per_page)
 
     return render_template('home.html', posts=posts, create_post_form=create_post_form, 
-                           edit_post_form=edit_post_form, delete_post_form=delete_post_form)
+                           edit_post_form=edit_post_form, delete_post_form=delete_post_form,
+                           order_by=order_by, order_direction=order_direction,
+                           search_query=search_query, tag_search=tag_search)
 
 
 @app.route('/create_post', methods=['GET', 'POST'])

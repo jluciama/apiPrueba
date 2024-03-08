@@ -64,21 +64,21 @@ class ForgotPasswordForm(FlaskForm):
         user = User.query.filter_by(username=username, email_address=email).first()
         if not user:
             raise ValidationError('User with provided email does not exist.')
-    
-    def validate_passwords(self, password1_field, password2_field):
-        password1 = password1_field.data
-        password2 = password2_field.data
 
-        if len(password1) < 6 or len(password2) < 6:
-            raise ValidationError('Passwords must be at least 6 characters long.')
+    def validate_password1(self, password1_field):
+        password = password1_field.data
 
-        if not (re.search(r'[A-Z]', password1) and
-                re.search(r'[a-z]', password1) and
-                re.search(r'[0-9]', password1) and
-                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password1)):
+        if len(password) < 6:
+            raise ValidationError('Password must be at least 6 characters long.')
+
+        if not (re.search(r'[A-Z]', password) and
+                re.search(r'[a-z]', password) and
+                re.search(r'[0-9]', password) and
+                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password)):
             raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
 
-        if password1 != password2:
+    def validate_password2(self, password2_field):
+        if self.password1.data != password2_field.data:
             raise ValidationError('Passwords do not match.')
 
 
