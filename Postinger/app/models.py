@@ -33,7 +33,7 @@ class Post(db.Model):
     title = db.Column(db.String(), nullable=False)
     body = db.Column(db.String(), nullable=False)
     owned_user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
-    tags = db.Column(db.String())
+    tags = db.Column(db.String()) # array de strings???
     likes_count = db.Column(db.Integer(), default=0)
     dislikes_count = db.Column(db.Integer(), default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

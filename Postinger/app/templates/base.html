@@ -33,6 +33,9 @@
                     <span class="nav-link" style="color: rgb(105, 179, 210); font-weight: bold;">Welcome, {{ current_user.username }}</span>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('profile_page') }}">Profile</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('logout_page') }}">Logout</a>
                 </li>
             </ul>

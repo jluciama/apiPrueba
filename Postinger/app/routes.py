@@ -1,9 +1,10 @@
 from app import app, db, login_manager
 from flask import render_template, redirect, url_for, flash, request, abort
 from app.models import User, Post
-from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, DeletePostForm, ForgotPasswordForm
+from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import or_, asc, desc, func
+from datetime import datetime
 
 
 @login_manager.user_loader
@@ -22,7 +23,7 @@ def root():
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if current_user.is_authenticated:
-        flash("You are already authenticated!")
+        flash("You are already authenticated!", category='info')
         return redirect(url_for('home_page'))
     
     form = LoginForm()
@@ -62,6 +63,29 @@ def forgot_password():
     return render_template('forgot_password.html', form=form)
 
 
+@app.route('/age-check', methods=['GET', 'POST'])
+# VERIFY THIS WORKS
+def age_check_page():
+    form = AgeCheckForm()
+    if form.validate_on_submit():
+        age = form.age.data
+        dob = form.dob.data
+        
+        date = datetime.utcnow
+        theoretical_age = date.year - dob.year - ((date.month, date.day) < (dob.month, dob.day))
+
+        if age < 18:
+            flash("You must be 18 or older to join our network!", category='danger')
+            return redirect(url_for('age_check_page'))
+        else:
+            if theoretical_age != age:
+                flash("Age and birthdate do not match!", category='danger')
+                return redirect(url_for('age_check_page'))
+            else:
+                return redirect(url_for('register_page'))
+
+    return redirect(url_for('register_page'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register_page():
     if current_user.is_authenticated:
@@ -99,7 +123,6 @@ def register_page():
 def home_page():
     create_post_form = CreatePostForm()
     edit_post_form = EditPostForm()
-    delete_post_form = DeletePostForm()
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)  # Default to 10 entries per page
@@ -107,22 +130,18 @@ def home_page():
     search_query = request.args.get('search', '')
     tag_search = request.args.get('tag_search', '')
 
-    # Sorting options
     order_by = request.args.get('order_by', 'date')
     order_direction = request.args.get('order_direction', 'desc')  # Default to descending order
 
-    # Start with all posts query
     posts_query = Post.query
 
-    # Split search query for post content and tags
     if search_query:
         posts_query = posts_query.filter(or_(Post.title.contains(search_query), Post.body.contains(search_query)))
 
     if tag_search:
-        # Remove '#' if present in the tag_search
         if tag_search.startswith('#'):
             tag_search = tag_search[1:]
-        # Precise tag search
+
         tag_search_lower = tag_search.lower()
         posts_query = posts_query.filter(
             or_(
@@ -133,7 +152,6 @@ def home_page():
             )
         )
 
-    # Apply sorting
     if order_by == 'date':
         posts_query = posts_query.order_by(Post.created_at.desc() if order_direction == 'desc' else Post.created_at.asc())
     elif order_by == 'likes':
@@ -141,11 +159,10 @@ def home_page():
     elif order_by == 'dislikes':
         posts_query = posts_query.order_by(Post.dislikes_count.desc() if order_direction == 'desc' else Post.dislikes_count.asc())
 
-    # Fetch posts based on the combined search queries and sorting
     posts = posts_query.paginate(page=page, per_page=per_page)
 
     return render_template('home.html', posts=posts, create_post_form=create_post_form, 
-                           edit_post_form=edit_post_form, delete_post_form=delete_post_form,
+                           edit_post_form=edit_post_form,
                            order_by=order_by, order_direction=order_direction,
                            search_query=search_query, tag_search=tag_search)
 
@@ -253,7 +270,33 @@ def dislike_post():
     return redirect(request.referrer)
 
 
+@app.route('/profile')
+@login_required
+def profile_page():
+    # to be implemented
+    form = ProfileForm()
+    return render_template('profile.html', form=form)
+
+
+@app.route('/deleteacc', methods=['POST', 'DELETE'])
+@login_required
+# REVISAR ERROR 405
+def delete_account():
+    user = current_user
+    try:
+        logout_user()
+        db.session.delete(user)
+        db.session.commit()
+        flash('Account deleted successfully!', category='success')
+        return redirect(url_for('login_page'))
+    except Exception as e:
+        flash('An unexpected error occurred. Please try again later.', 'danger')
+        app.logger.error(f"Error while deleting user: {str(e)}")
+    logout_user()
+
+
 @app.route('/logout')
+@login_required
 def logout_page():
     logout_user()
     flash("You have been logged out!", category='info')

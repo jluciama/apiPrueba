@@ -3,10 +3,11 @@ from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 import re
 from app.models import User
+from datetime import datetime
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
+    username = StringField('Username', validators=[DataRequired()])
     email_address = StringField('Email', validators=[DataRequired(), Email()])
     password1 = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField('Confirm Password', validators=[DataRequired()])
@@ -16,6 +17,11 @@ class RegisterForm(FlaskForm):
         user = User.query.filter_by(username=username.data).first()
         if user:
             raise ValidationError('Username already registered. Please choose a different one.')
+        else:
+            if len(username) < 1:
+                raise ValidationError('Usernames must have at least 1 character.')
+            elif len(username) > 25:
+                raise ValidationError('Usernames must not be over 25 characters.')
 
     def validate_email_address(self, email_address):
         user = User.query.filter_by(email_address=email_address.data).first()
@@ -46,10 +52,10 @@ class LoginForm(FlaskForm):
 
 
 class ForgotPasswordForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
+    username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password1 = PasswordField('New Password', validators=[DataRequired()])
-    password2 = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password1')])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Reset Password')
 
     def validate_username(self, username_field):
@@ -96,5 +102,30 @@ class EditPostForm(FlaskForm):
     submit = SubmitField('Edit a post!')
 
 
-class DeletePostForm(FlaskForm):
-    submit = SubmitField(label='Delete a post!')
+class AgeCheckForm(FlaskForm):
+    # to be implemented
+    age = StringField(label='Age:', validators=[DataRequired()])
+    dob = StringField(label='Date of birth (DD/MM/YYYY):', validators=[DataRequired()])
+    submit = SubmitField(label='Verify your age!')
+
+    def validate_dob(form, dob):
+        try:
+            dob = datetime.strptime(dob.data, "%d/%m/%Y")
+        except ValueError:
+            raise ValidationError("Date of birth must be introduced in the following format (DD/MM/YYYY)")
+
+
+class PhoneAuthForm(FlaskForm):
+    # to be implemented
+    phone = StringField(label='Prefix:', validators=[DataRequired()])
+    number = StringField(label='Phone Number:', validators=[DataRequired()])
+
+
+class ProfileForm(FlaskForm):
+    # to be implemented
+    name = StringField(label='Name:')
+    username = StringField(label='Username:', validators=[DataRequired()])
+    gender = StringField(label='Gender:')
+    pronouns = StringField(label='Pronouns:')
+    bio = StringField(label='Bio:')
+    submit = SubmitField(label='Save your changes!')
