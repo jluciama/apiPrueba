@@ -10,7 +10,6 @@
             <div class="col-md-6">
                 <form method="POST" action="{{ url_for('login_page') }}" class="form-register" style="color:white;">
                     {{ form.hidden_tag() }}
-                    <img class="mb-4" src="https://imgur.com/ANK8c20.png" alt="">
                     <h1 class="h1 mb-3 font-weight-bold">
                         LOGIN
                     </h1>
@@ -29,7 +28,7 @@
 
                     <div class="mt-3">
                         <p class="text-white mb-1">Do not have an account?</p>
-                        <a href="{{ url_for('register_page') }}" class="btn btn-sm btn-secondary">Register</a>
+                        <a href="{{ url_for('age_check_page') }}" class="btn btn-sm btn-secondary">Register</a>
                         <p class="text-white mt-1">Forgot your password? <a href="{{ url_for('forgot_password') }}">Reset it</a></p>
                     </div>
                 </form>

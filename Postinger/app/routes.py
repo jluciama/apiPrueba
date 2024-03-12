@@ -1,16 +1,14 @@
-from app import app, db, login_manager
+from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
+from app import app, db, login_manager
 from app.models import User, Post
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import or_, asc, desc, func
-from datetime import datetime
-
+from sqlalchemy import or_, func
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
 
 @app.route('/')
 def root():
@@ -18,7 +16,6 @@ def root():
         return redirect(url_for('home_page'))
     else:
         return redirect(url_for('login_page'))
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -36,7 +33,6 @@ def login_page():
             return redirect(next_page) if next_page else redirect(url_for('home_page'))
         flash('There was an error logging in. Please try again.', category='danger')
     return render_template('login.html', form=form)
-
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
@@ -63,29 +59,6 @@ def forgot_password():
     return render_template('forgot_password.html', form=form)
 
 
-@app.route('/age-check', methods=['GET', 'POST'])
-# VERIFY THIS WORKS
-def age_check_page():
-    form = AgeCheckForm()
-    if form.validate_on_submit():
-        age = form.age.data
-        dob = form.dob.data
-        
-        date = datetime.utcnow
-        theoretical_age = date.year - dob.year - ((date.month, date.day) < (dob.month, dob.day))
-
-        if age < 18:
-            flash("You must be 18 or older to join our network!", category='danger')
-            return redirect(url_for('age_check_page'))
-        else:
-            if theoretical_age != age:
-                flash("Age and birthdate do not match!", category='danger')
-                return redirect(url_for('age_check_page'))
-            else:
-                return redirect(url_for('register_page'))
-
-    return redirect(url_for('register_page'))
-
 @app.route('/register', methods=['GET', 'POST'])
 def register_page():
     if current_user.is_authenticated:
@@ -103,8 +76,9 @@ def register_page():
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
-            flash('Account created successfully! You can now log in.', 'success')
-            return redirect(url_for('login_page'))
+            login_user(user)
+            flash('Registration successful!', 'success')
+            return redirect(url_for('home_page'))
         except Exception as e:
             flash('An unexpected error occurred. Please try again later.', 'danger')
             app.logger.error(f"Error while registering user: {str(e)}")
@@ -117,6 +91,36 @@ def register_page():
 
     return render_template('register.html', form=form)
 
+@app.route('/age-check', methods=['GET', 'POST'])
+def age_check_page():
+    form = AgeCheckForm()
+    if form.validate_on_submit():
+        day = int(form.day.data)
+        month = int(form.month.data)
+        year = int(form.year.data)
+        provided_age = int(form.age.data)
+
+        dob = datetime(year, month, day)
+        today = datetime.now()
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+        if provided_age < 18:
+            flash("You must be 18 or older to join our network!", category='danger')
+            return render_template('age_check.html', form=form, current_datetime=datetime.now())
+
+        if age != provided_age:
+            flash("Your age doesn't match the date of birth!", category='danger')
+            return render_template('age_check.html', form=form, current_datetime=datetime.now())
+
+        flash("Welcome! Please register.", category='info')
+        return redirect(url_for('register_page'))
+    
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'danger')
+
+    return render_template('age_check.html', form=form, current_datetime=datetime.now())
 
 @app.route('/home', methods=['GET'])
 @login_required
@@ -166,7 +170,6 @@ def home_page():
                            order_by=order_by, order_direction=order_direction,
                            search_query=search_query, tag_search=tag_search)
 
-
 @app.route('/create_post', methods=['GET', 'POST'])
 @login_required
 def create_post():
@@ -185,7 +188,6 @@ def create_post():
         flash('Post created successfully!', category='success')
         return redirect(url_for('home_page'))
     return render_template('create_post.html', form=form)
-
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
@@ -206,7 +208,6 @@ def edit_post(post_id):
         return redirect(url_for('home_page'))
     return render_template('edit_post.html', form=form)
 
-
 @app.route('/delete_post/<int:post_id>', methods=['POST', 'DELETE'])
 @login_required
 def delete_post(post_id):
@@ -220,7 +221,6 @@ def delete_post(post_id):
         return redirect(url_for('home_page'))
     else:
         abort(405)
-
 
 @app.route('/like_post', methods=['POST'])
 @login_required
@@ -245,7 +245,6 @@ def like_post():
 
     return redirect(request.referrer)
 
-
 @app.route('/dislike_post', methods=['POST'])
 @login_required
 def dislike_post():
@@ -269,31 +268,39 @@ def dislike_post():
 
     return redirect(request.referrer)
 
-
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile_page():
-    # to be implemented
-    form = ProfileForm()
-    return render_template('profile.html', form=form)
-
+    form = ProfileForm(obj=current_user)
+    if form.validate_on_submit():
+        form.populate_obj(current_user)
+        db.session.commit()
+        flash('Profile updated successfully!', category='success')
+        return redirect(url_for('home_page'))
+    
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'danger')
+    
+    return render_template('profile.html', user=current_user, form=form)
 
 @app.route('/deleteacc', methods=['POST', 'DELETE'])
 @login_required
-# REVISAR ERROR 405
 def delete_account():
-    user = current_user
-    try:
-        logout_user()
-        db.session.delete(user)
-        db.session.commit()
-        flash('Account deleted successfully!', category='success')
-        return redirect(url_for('login_page'))
-    except Exception as e:
-        flash('An unexpected error occurred. Please try again later.', 'danger')
-        app.logger.error(f"Error while deleting user: {str(e)}")
-    logout_user()
-
+    if request.method in ['POST', 'DELETE']:
+        try:
+            db.session.delete(current_user)
+            db.session.commit()
+            flash('Account deleted successfully!', category='success')
+            logout_user()
+            return redirect(url_for('login_page'))
+        except Exception as e:
+            flash('An error occurred while deleting your account. Please try again later.', 'danger')
+            return redirect(url_for('home_page'))
+    else:
+        flash('Method not allowed.', 'warning')
+        return redirect(url_for('home_page'))
 
 @app.route('/logout')
 @login_required

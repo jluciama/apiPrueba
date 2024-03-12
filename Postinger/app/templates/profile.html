@@ -10,42 +10,37 @@
             <div class="col-md-6">
                 <form method="POST" action="{{ url_for('profile_page') }}" class="form-register" style="color:white;">
                     {{ form.hidden_tag() }}
-                    <img class="mb-4" src="https://imgur.com/ANK8c20.png" alt="">
                     <h1 class="h1 mb-3 font-weight-bold">
                         MY PROFILE
                     </h1>
                     <br>
                     <div class="form-group">
-                        <!-- Autocomplete with current name if any --> 
-                        {{ form.name(class="form-control rounded-pill text-center", placeholder="Name") }}
+                        {{ form.name(class="form-control rounded-pill text-center", value=user.name if user.name else '', placeholder="Name", id="name") }}
                     </div>
-
+                    
                     <div class="form-group">
-                        <!-- Autocomplete with current username. Ask for password upon save --> 
-                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username") }}
+                        {{ form.username(class="form-control rounded-pill text-center", value=user.username if user.username else '', placeholder="Username", id="username") }}
                     </div>
-
+                    
                     <div class="form-group">
-                        <!-- Autocomplete with current gender if any --> 
-                        {{ form.gender(class="form-control rounded-pill text-center", placeholder="Gender") }}
+                        {{ form.gender(class="form-control rounded-pill text-center", value=user.gender if user.gender else '', placeholder="Gender", id="gender") }}
                     </div>
-
+                    
                     <div class="form-group">
-                        <!-- Autocomplete with current pronouns if any -->
-                        {{ form.pronouns(class="form-control rounded-pill text-center", placeholder="Pronouns") }}
+                        {{ form.pronouns(class="form-control rounded-pill text-center", value=user.pronouns if user.pronouns else '', placeholder="Pronouns", id="pronouns") }}
                     </div>
-
+                    
                     <div class="form-group">
-                        <!-- Make this multiline and autocomplete with current bio if any -->    
-                        {{ form.bio(class="form-control rounded-pill text-center", placeholder="Bio") }}
-                    </div>
+                        <textarea class="form-control rounded-pill text-center" id="bio" name="bio" placeholder="Bio">{{ user.bio if user.bio else '' }}</textarea>
+                    </div>                    
+
                     <div style="margin-bottom: 20px;"></div>
                     
                     <div class="button-container">
                         <button type="submit" style='margin-right: 10px' class="btn btn-lg btn-primary btn-register">Save Changes</button>
-                        <form method="POST" action="{{ url_for('delete_account')}}">
+                        <form id="delete-form" method="POST" action="{{ url_for('delete_account')}}">
                             <input type="hidden" name="_method" value="DELETE">
-                            <button type="submit" style = 'margin-left:10px' class="btn btn-lg btn-danger btn-register" onclick="return confirm('Are you sure you want to delete this account?')">Delete Account</button>
+                            <button type="button" style="margin-left: 10px" class="btn btn-lg btn-danger btn-register" onclick="confirmAndDelete()">Delete Account</button>
                         </form>
                     </div>
                     
@@ -54,6 +49,54 @@
         </div>
     </div>
 </body>
+
+<script>
+    function confirmAndDelete() {
+        if (confirm('Are you sure you want to delete this account?')) {
+            fetch('{{ url_for("delete_account") }}', {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '{{ url_for("login_page") }}';
+                } else {
+                    throw new Error('Failed to delete account');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting account:', error);
+                alert('An error occurred while deleting your account. Please try again later.');
+            });
+        }
+    }
+    function clearField(fieldId) {
+        var field = document.getElementById(fieldId);
+        if (field.value === '' || field.value === 'null') {
+            field.value = '';
+            field.placeholder = field.getAttribute('placeholder');
+        }
+    }
+
+    document.getElementById('name').addEventListener('input', function() {
+        clearField('name');
+    });
+
+    document.getElementById('username').addEventListener('input', function() {
+        clearField('username');
+    });
+
+    document.getElementById('gender').addEventListener('input', function() {
+        clearField('gender');
+    });
+
+    document.getElementById('pronouns').addEventListener('input', function() {
+        clearField('pronouns');
+    });
+
+    document.getElementById('bio').addEventListener('input', function() {
+        clearField('bio');
+    });
+</script>
 
 <style>
     .form-control {

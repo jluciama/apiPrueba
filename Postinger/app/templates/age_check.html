@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}
+    Age Verification
+{% endblock %}
+
+{% block content %}
+<body class="text-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <form method="POST" action="{{ url_for('age_check_page') }}" class="form-register" style="color:white;">
+                    {{ form.hidden_tag() }}
+                    <h1 class="h1 mb-4 font-weight-bold">
+                        AGE VERIFICATION
+                    </h1>
+                    <div class="form-group mb-4 d-flex justify-content-center">
+                        <label for="age" class="sr-only">Age:</label>
+                        <input type="text" id="age" name="age" class="form-control rounded-pill text-center" placeholder="Age" required>
+                    </div>
+                    <div class="form-group d-flex justify-content-center mb-4">
+                        <select id="day" name="day" class="form-control rounded-pill mr-2" required>
+                            <option value="" selected disabled>Day</option>
+                            {% for day in range(1, 32) %}
+                                <option value="{{ day }}">{{ day }}</option>
+                            {% endfor %}
+                        </select>
+                        <select id="month" name="month" class="form-control rounded-pill mr-2" required>
+                            <option value="" selected disabled>Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                        <select id="year" name="year" class="form-control rounded-pill" required>
+                            <option value="" selected disabled>Year</option>
+                            {% for year in range(current_datetime.year - 100, current_datetime.year + 1) %}
+                                <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-primary btn-login">Verify</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+
+<style>
+    .form-control {
+        height: 50px;
+    }
+
+    .rounded-pill {
+        width: 400px;
+        border-radius: 0;
+    }
+
+    .btn-login {
+        width: 100px;
+        border-radius: 0;
+    }
+</style>
+
+<script>
+    function isLeapYear(year) {
+        return (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
+    }
+
+    function updateDayOptions(daySelect, maxDay, currentDay) {
+        while (daySelect.options.length > 1) {
+            daySelect.remove(1);
+        }
+        for (var i = 1; i <= maxDay; i++) {
+            if (i >= currentDay) {
+                var option = document.createElement('option');
+                option.value = i;
+                option.text = i;
+                daySelect.add(option);
+            }
+        }
+    }
+
+    // Adjust day options based on the current month and year
+    function adjustDayOptions(month, year) {
+        var daySelect = document.getElementById('day');
+        var currentDay = parseInt(new Date().getDate()); // Current day
+        var maxDay = 31;
+
+        if (month === 2) { // February
+            maxDay = isLeapYear(year) ? 29 : 28; // Leap year logic
+            // If the selected day exceeds the maximum valid day for February,
+            // adjust it to the closest valid day
+            if (parseInt(daySelect.value) > maxDay) {
+                daySelect.value = maxDay;
+            }
+        } else if ([4, 6, 9, 11].includes(month)) { // Months with 30 days
+            maxDay = 30;
+            // If the selected day exceeds the maximum valid day for the month,
+            // adjust it to the closest valid day
+            if (parseInt(daySelect.value) > maxDay) {
+                daySelect.value = maxDay;
+            }
+        }
+    }
+    // Adjust day options and hide future months and days initially
+    document.addEventListener('DOMContentLoaded', function() {
+        var monthSelect = document.getElementById('month');
+        var yearSelect = document.getElementById('year');
+        
+        // Initial adjustment of day options
+        adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
+
+        // Event listener for month change
+        monthSelect.addEventListener('change', function() {
+            adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
+        });
+
+        // Event listener for year change
+        yearSelect.addEventListener('change', function() {
+            adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
+        });
+    });
+</script>
+
+{% endblock %}
