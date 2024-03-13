@@ -19,7 +19,6 @@ def root():
     else:
         return redirect(url_for('login_page'))
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if current_user.is_authenticated:
@@ -32,8 +31,7 @@ def login_page():
         if attempted_user and attempted_user.check_password(form.password.data):
             login_user(attempted_user)
             flash(f'Success! You are now logged in as: {attempted_user.username}', category='success')
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('home_page'))
+            return redirect(url_for('home_page'))
         flash('There was an error logging in. Please try again.', category='danger')
     return render_template('login.html', form=form)
 
@@ -78,6 +76,7 @@ def register_page():
         try:
             user = User(username=username, email_address=email)
             user.set_password(password)
+            user.name = username
             db.session.add(user)
             db.session.commit()
             login_user(user)
@@ -298,22 +297,19 @@ def profile_page():
     return render_template('profile.html', user=current_user, form=form)
 
 
-@app.route('/deleteacc', methods=['POST', 'DELETE'])
+@app.route('/deleteacc', methods=['DELETE'])
 @login_required
 def delete_account():
-    if request.method in ['POST', 'DELETE']:
-        try:
-            db.session.delete(current_user)
-            db.session.commit()
-            flash('Account deleted successfully!', category='success')
-            logout_user()
-            return redirect(url_for('login_page'))
-        except Exception as e:
-            flash('An error occurred while deleting your account. Please try again later.', 'warning')
-            logout_user()
-            return redirect(url_for('home_page'))
-    else:
-        flash('Method not allowed.', 'warning')
+    try:
+        db.session.delete(current_user)
+        db.session.commit()
+        flash('Account deleted successfully!', category='success')
+        logout_user()
+        return redirect(url_for('login_page'))
+    except Exception as e:
+        flash('An error occurred while deleting your account. Please try again later.', 'warning')
+        # saca error
+        logout_user()
         return redirect(url_for('home_page'))
 
 

@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_login import UserMixin
 
 
-# Association table for likes
+# Association table for likes. NO??
 likes = db.Table(
     'likes',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
@@ -11,7 +11,7 @@ likes = db.Table(
 )
 
 
-# Association table for dislikes
+# Association table for dislikes. NO??
 dislikes = db.Table(
     'dislikes',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
