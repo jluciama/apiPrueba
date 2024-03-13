@@ -1,14 +1,16 @@
+from app import app, db, login_manager
+from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
+from app.models import User, Post
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
-from app import app, db, login_manager
-from app.models import User, Post
-from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import or_, func
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
 
 @app.route('/')
 def root():
@@ -17,10 +19,11 @@ def root():
     else:
         return redirect(url_for('login_page'))
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if current_user.is_authenticated:
-        flash("You are already authenticated!", category='info')
+        flash("You are already logged in!", category='info')
         return redirect(url_for('home_page'))
     
     form = LoginForm()
@@ -33,6 +36,7 @@ def login_page():
             return redirect(next_page) if next_page else redirect(url_for('home_page'))
         flash('There was an error logging in. Please try again.', category='danger')
     return render_template('login.html', form=form)
+
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
@@ -91,6 +95,7 @@ def register_page():
 
     return render_template('register.html', form=form)
 
+
 @app.route('/age-check', methods=['GET', 'POST'])
 def age_check_page():
     form = AgeCheckForm()
@@ -121,6 +126,7 @@ def age_check_page():
                 flash(error, 'danger')
 
     return render_template('age_check.html', form=form, current_datetime=datetime.now())
+
 
 @app.route('/home', methods=['GET'])
 @login_required
@@ -170,6 +176,7 @@ def home_page():
                            order_by=order_by, order_direction=order_direction,
                            search_query=search_query, tag_search=tag_search)
 
+
 @app.route('/create_post', methods=['GET', 'POST'])
 @login_required
 def create_post():
@@ -188,6 +195,7 @@ def create_post():
         flash('Post created successfully!', category='success')
         return redirect(url_for('home_page'))
     return render_template('create_post.html', form=form)
+
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
@@ -208,6 +216,7 @@ def edit_post(post_id):
         return redirect(url_for('home_page'))
     return render_template('edit_post.html', form=form)
 
+
 @app.route('/delete_post/<int:post_id>', methods=['POST', 'DELETE'])
 @login_required
 def delete_post(post_id):
@@ -221,6 +230,7 @@ def delete_post(post_id):
         return redirect(url_for('home_page'))
     else:
         abort(405)
+
 
 @app.route('/like_post', methods=['POST'])
 @login_required
@@ -245,6 +255,7 @@ def like_post():
 
     return redirect(request.referrer)
 
+
 @app.route('/dislike_post', methods=['POST'])
 @login_required
 def dislike_post():
@@ -268,6 +279,7 @@ def dislike_post():
 
     return redirect(request.referrer)
 
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile_page():
@@ -285,6 +297,7 @@ def profile_page():
     
     return render_template('profile.html', user=current_user, form=form)
 
+
 @app.route('/deleteacc', methods=['POST', 'DELETE'])
 @login_required
 def delete_account():
@@ -296,11 +309,13 @@ def delete_account():
             logout_user()
             return redirect(url_for('login_page'))
         except Exception as e:
-            flash('An error occurred while deleting your account. Please try again later.', 'danger')
+            flash('An error occurred while deleting your account. Please try again later.', 'warning')
+            logout_user()
             return redirect(url_for('home_page'))
     else:
         flash('Method not allowed.', 'warning')
         return redirect(url_for('home_page'))
+
 
 @app.route('/logout')
 @login_required

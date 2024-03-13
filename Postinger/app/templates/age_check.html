@@ -74,60 +74,104 @@
         return (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
     }
 
-    function updateDayOptions(daySelect, maxDay, currentDay) {
+    function updateDayOptions(daySelect, maxDay) {
         while (daySelect.options.length > 1) {
             daySelect.remove(1);
         }
         for (var i = 1; i <= maxDay; i++) {
-            if (i >= currentDay) {
-                var option = document.createElement('option');
-                option.value = i;
-                option.text = i;
-                daySelect.add(option);
-            }
+            var option = document.createElement('option');
+            option.value = i;
+            option.text = i;
+            daySelect.add(option);
         }
     }
 
-    // Adjust day options based on the current month and year
+    function updateMonthOptions(monthSelect, currentMonth) {
+        while (monthSelect.options.length > 1) {
+            monthSelect.remove(1);
+        }
+        var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        for (var i = 0; i < currentMonth; i++) {
+            var option = document.createElement('option');
+            option.value = i + 1;
+            option.text = months[i];
+            monthSelect.add(option);
+        }
+    }
+
     function adjustDayOptions(month, year) {
         var daySelect = document.getElementById('day');
-        var currentDay = parseInt(new Date().getDate()); // Current day
         var maxDay = 31;
 
-        if (month === 2) { // February
-            maxDay = isLeapYear(year) ? 29 : 28; // Leap year logic
-            // If the selected day exceeds the maximum valid day for February,
-            // adjust it to the closest valid day
-            if (parseInt(daySelect.value) > maxDay) {
-                daySelect.value = maxDay;
-            }
-        } else if ([4, 6, 9, 11].includes(month)) { // Months with 30 days
-            maxDay = 30;
-            // If the selected day exceeds the maximum valid day for the month,
-            // adjust it to the closest valid day
-            if (parseInt(daySelect.value) > maxDay) {
-                daySelect.value = maxDay;
+        var currentDate = new Date();
+        var currentYear = currentDate.getFullYear();
+        var currentMonth = currentDate.getMonth() + 1;
+        var currentDay = currentDate.getDate();
+
+        if (year > currentYear || (year === currentYear && month > currentMonth)) {
+            year = currentYear;
+            month = currentMonth;
+        }
+
+        if (year === currentYear && month === currentMonth) {
+            maxDay = currentDay;
+        } else {
+            if (month === 2) {
+                maxDay = isLeapYear(year) ? 29 : 28;
+            } else if ([4, 6, 9, 11].includes(month)) {
+                maxDay = 30;
             }
         }
+
+        var selectedDay = parseInt(daySelect.value);
+        if (isNaN(selectedDay)) { // If the selected day is not a number (placeholder), do nothing
+            return;
+        }
+
+        if (selectedDay > maxDay) {
+            selectedDay = maxDay;
+        }
+
+        updateDayOptions(daySelect, maxDay);
+        daySelect.value = selectedDay;
     }
-    // Adjust day options and hide future months and days initially
+
     document.addEventListener('DOMContentLoaded', function() {
         var monthSelect = document.getElementById('month');
         var yearSelect = document.getElementById('year');
-        
-        // Initial adjustment of day options
+        var daySelect = document.getElementById('day');
+
         adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
 
-        // Event listener for month change
         monthSelect.addEventListener('change', function() {
+            var currentYear = new Date().getFullYear();
+            var selectedYear = parseInt(yearSelect.value);
+            var maxMonth = currentYear === selectedYear ? new Date().getMonth() + 1 : 12;
+            if (parseInt(monthSelect.value) > maxMonth) {
+                monthSelect.value = maxMonth;
+            }
             adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
         });
 
-        // Event listener for year change
         yearSelect.addEventListener('change', function() {
-            adjustDayOptions(parseInt(monthSelect.value), parseInt(yearSelect.value));
+            var selectedYear = parseInt(yearSelect.value);
+            var selectedMonth = parseInt(monthSelect.value);
+            adjustDayOptions(selectedMonth, selectedYear);
+
+            // If the selected year is the current year, update the month options
+            if (selectedYear === new Date().getFullYear()) {
+                var currentMonth = new Date().getMonth() + 1;
+                updateMonthOptions(monthSelect, currentMonth);
+                // If the selected month is in the future, set it to the current month
+                if (selectedMonth > currentMonth) {
+                    monthSelect.value = currentMonth;
+                }
+            }
         });
     });
 </script>
+
+
+
 
 {% endblock %}

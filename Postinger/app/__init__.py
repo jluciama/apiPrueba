@@ -17,6 +17,5 @@ login_manager.login_message_category = "info"
 from app import routes
 
 
-# Create database tables within application context
 with app.app_context():
     db.create_all()
