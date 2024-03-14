@@ -297,20 +297,14 @@ def profile_page():
     return render_template('profile.html', user=current_user, form=form)
 
 
-@app.route('/deleteacc', methods=['DELETE'])
+@app.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    try:
-        db.session.delete(current_user)
-        db.session.commit()
-        flash('Account deleted successfully!', category='success')
-        logout_user()
-        return redirect(url_for('login_page'))
-    except Exception as e:
-        flash('An error occurred while deleting your account. Please try again later.', 'warning')
-        # saca error
-        logout_user()
-        return redirect(url_for('home_page'))
+    db.session.delete(current_user)
+    db.session.commit()
+    logout_user()
+    flash('Your account has been successfully deleted.', 'success')
+    return redirect(url_for('login_page'))
 
 
 @app.route('/logout')

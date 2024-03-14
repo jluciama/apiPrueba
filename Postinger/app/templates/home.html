@@ -123,12 +123,12 @@
                             <div style="position: absolute; bottom: 5px; right: 5px;">
                                 <form method="POST" action="{{ url_for('like_post') }}" style="display: inline;">
                                     <input type="hidden" name="post_id" value="{{ post.id }}">
-                                    <button type="submit" class="btn btn-primary btn-sm like-btn" data-post-id="{{ post.id }}">Like</button>
+                                    <button type="submit" class="btn btn-like {% if current_user in post.liked_users %}liked{% endif %}" data-post-id="{{ post.id }}">👍</button>
                                 </form>
                                 <span class="like-count">{{ post.likes_count }}</span>
                                 <form method="POST" action="{{ url_for('dislike_post') }}" style="display: inline;">
                                     <input type="hidden" name="post_id" value="{{ post.id }}">
-                                    <button type="submit" class="btn btn-danger btn-sm dislike-btn" data-post-id="{{ post.id }}">Dislike</button>
+                                    <button type="submit" class="btn btn-dislike {% if current_user in post.disliked_users %}disliked{% endif %}" data-post-id="{{ post.id }}">👎</button>
                                 </form>
                                 <span class="dislike-count">{{ post.dislikes_count }}</span>
                             </div>
@@ -191,7 +191,22 @@
             </div>
         </div>
     </div>
+
+
     <style>
+        .btn-like, .btn-dislike {
+            border: 1px solid black;
+            background-color: transparent;
+        }
+    
+        .liked {
+            background-color: blue;
+        }
+    
+        .disliked {
+            background-color: red;
+        }
+
         body {
             background-color: #212121;
             color: white;

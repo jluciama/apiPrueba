@@ -39,8 +39,8 @@
                     <div class="button-container">
                         <button type="submit" style='margin-right: 10px' class="btn btn-lg btn-primary btn-register">Save Changes</button>
                         <form id="delete-form" method="POST" action="{{ url_for('delete_account')}}">
-                            <input type="hidden" name="_method" value="DELETE">
-                            <button type="button" style="margin-left: 10px" class="btn btn-lg btn-danger btn-register" onclick="confirmAndDelete()">Delete Account</button>
+                            {{ form.csrf_token }}
+                            <button type="button" class="btn btn-lg btn-danger btn-register" onclick="confirmDelete()">Delete Account</button>
                         </form>
                     </div>
                     
@@ -51,22 +51,22 @@
 </body>
 
 <script>
-    function confirmAndDelete() {
-        if (confirm('Are you sure you want to delete this account?')) {
-            fetch('{{ url_for("delete_account") }}', {
-                method: 'DELETE'
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = '{{ url_for("login_page") }}';
-                } else {
-                    throw new Error('Failed to delete account');
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting account:', error);
-                alert('An error occurred while deleting your account. Please try again later.');
-            });
+    function confirmDelete() {
+        var confirmDelete = confirm('Are you sure you want to delete this account?');
+        
+        if (confirmDelete) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/delete_account';
+            
+            var csrfTokenInput = document.createElement('input');
+            csrfTokenInput.type = 'hidden';
+            csrfTokenInput.name = 'csrf_token';
+            csrfTokenInput.value = '{{ form.csrf_token._value() }}';
+            form.appendChild(csrfTokenInput);
+            
+            document.body.appendChild(form);
+            form.submit();
         }
     }
     function clearField(fieldId) {
