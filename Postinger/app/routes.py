@@ -99,26 +99,22 @@ def register_page():
 def age_check_page():
     form = AgeCheckForm()
     if form.validate_on_submit():
-        day = int(form.day.data)
-        month = int(form.month.data)
-        year = int(form.year.data)
-        provided_age = int(form.age.data)
+        date_of_birth = form.date_of_birth.data
+        today = datetime.now().date()
 
-        dob = datetime(year, month, day)
-        today = datetime.now()
-        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        if date_of_birth > today:
+            flash("Please enter a valid date of birth.", category='danger')
+        else:
+            provided_age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
 
-        if provided_age < 18:
-            flash("You must be 18 or older to join our network!", category='danger')
-            return render_template('age_check.html', form=form, current_datetime=datetime.now())
+            if provided_age < 18:
+                flash("You must be 18 or older to join our network!", category='danger')
+            elif provided_age >= 100:
+                flash("You must be younger than 100 years old to join our network!", category='danger')
+            else:
+                flash("Welcome! Please register.", category='info')
+                return redirect(url_for('register_page'))
 
-        if age != provided_age:
-            flash("Your age doesn't match the date of birth!", category='danger')
-            return render_template('age_check.html', form=form, current_datetime=datetime.now())
-
-        flash("Welcome! Please register.", category='info')
-        return redirect(url_for('register_page'))
-    
     if form.errors:
         for field, errors in form.errors.items():
             for error in errors:

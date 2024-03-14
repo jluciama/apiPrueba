@@ -2,7 +2,7 @@ from app.models import User
 from datetime import datetime
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, DateField
 from wtforms.validators import DataRequired, Email, ValidationError
 import re
 
@@ -101,16 +101,13 @@ class EditPostForm(FlaskForm):
 
 
 class AgeCheckForm(FlaskForm):
-    age = StringField(label='Age:', validators=[DataRequired()])
-    day = SelectField(label='Day', validators=[DataRequired()])
-    month = SelectField(label='Month', validators=[DataRequired()])
-    year = SelectField(label='Year', validators=[DataRequired()])
+    date_of_birth = DateField(label='Date of Birth', validators=[DataRequired()], format='%Y-%m-%d')
+    submit = SubmitField('Verify')
 
-    def __init__(self, *args, **kwargs):
-        super(AgeCheckForm, self).__init__(*args, **kwargs)
-        self.day.choices = [(str(day), str(day)) for day in range(1, 32)]
-        self.month.choices = [(str(month), str(month)) for month in range(1, 13)]
-        self.year.choices = [(str(year), str(year)) for year in range(datetime.now().year - 100, datetime.now().year + 1)]
+    def validate_date_of_birth(form, date_of_birth):
+        today = datetime.now().date()
+        if date_of_birth.data >= today:
+            raise ValidationError('Date of birth must be in the past.')
 
     def validate_age(form, age):
         try:
