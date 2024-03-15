@@ -28,6 +28,7 @@ class User(db.Model, UserMixin):
     gender = db.Column(db.String)
     pronouns = db.Column(db.String)
     bio = db.Column(db.Text)
+    is_admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='owned_user', lazy=True)
 
     def set_password(self, plain_text_password):

@@ -2,7 +2,7 @@ from app.models import User
 from datetime import datetime
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, TextAreaField, SelectField, DateField
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField
 from wtforms.validators import DataRequired, Email, ValidationError
 import re
 
@@ -123,9 +123,3 @@ class ProfileForm(FlaskForm):
     pronouns = StringField(label='Pronouns:')
     bio = StringField(label='Bio:')
     submit = SubmitField(label='Save your changes!')
-
-    def validate_username(self, username):
-        previous_user = current_user
-        user = User.query.filter_by(username=username.data).first()
-        if user is not None and user != previous_user:
-            raise ValidationError('Username already exists. Please choose a different one.')

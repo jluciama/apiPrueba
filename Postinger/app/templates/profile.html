@@ -8,42 +8,47 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <form method="POST" action="{{ url_for('profile_page') }}" class="form-register" style="color:white;">
+                <form method="POST" action="{{ url_for('profile_page', username=user.username) }}" class="form-register" style="color:white;">
                     {{ form.hidden_tag() }}
                     <h1 class="h1 mb-3 font-weight-bold">
-                        MY PROFILE
+                        {% if user == current_user %}
+                            MY PROFILE
+                        {% else %}
+                            {{ user.name|upper }}'S PROFILE
+                        {% endif %}
                     </h1>
                     <br>
                     <div class="form-group">
-                        {{ form.name(class="form-control rounded-pill text-center", value=user.name if user.name else '', placeholder="Name", id="name") }}
+                        {{ form.name(class="form-control rounded-pill text-center", placeholder="Name", id="name") }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.username(class="form-control rounded-pill text-center", value=user.username if user.username else '', placeholder="Username", id="username") }}
+                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username", id="username") }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.gender(class="form-control rounded-pill text-center", value=user.gender if user.gender else '', placeholder="Gender", id="gender") }}
+                        {{ form.gender(class="form-control rounded-pill text-center", placeholder="Gender", id="gender") }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.pronouns(class="form-control rounded-pill text-center", value=user.pronouns if user.pronouns else '', placeholder="Pronouns", id="pronouns") }}
+                        {{ form.pronouns(class="form-control rounded-pill text-center", placeholder="Pronouns", id="pronouns") }}
                     </div>
                     
                     <div class="form-group">
-                        <textarea class="form-control rounded-pill text-center" id="bio" name="bio" placeholder="Bio">{{ user.bio if user.bio else '' }}</textarea>
-                    </div>                    
+                        {{ form.bio(class="form-control rounded-pill text-center", placeholder="Bio", id="bio") }}
+                    </div>                                
 
                     <div style="margin-bottom: 20px;"></div>
                     
                     <div class="button-container">
-                        <button type="submit" style='margin-right: 10px' class="btn btn-lg btn-primary btn-register">Save Changes</button>
-                        <form id="delete-form" method="POST" action="{{ url_for('delete_account')}}">
-                            {{ form.csrf_token }}
-                            <button type="button" class="btn btn-lg btn-danger btn-register" onclick="confirmDelete()">Delete Account</button>
-                        </form>
+                        {% if can_edit %}
+                            <button type="submit" class="btn btn-lg btn-primary btn-register">Save Changes</button>
+                        {% endif %}
+                        {% if can_delete %}
+                            <!-- Pass the username in the form submission -->
+                            <button type="button" class="btn btn-lg btn-danger btn-register" onclick="confirmDelete('{{ user.username }}')">Delete Account</button>
+                        {% endif %}
                     </div>
-                    
                 </form>
             </div>
         </div>
@@ -51,7 +56,7 @@
 </body>
 
 <script>
-    function confirmDelete() {
+    function confirmDelete(username) {
         var confirmDelete = confirm('Are you sure you want to delete this account?');
         
         if (confirmDelete) {
@@ -59,11 +64,19 @@
             form.method = 'POST';
             form.action = '/delete_account';
             
+            // Add the CSRF token
             var csrfTokenInput = document.createElement('input');
             csrfTokenInput.type = 'hidden';
             csrfTokenInput.name = 'csrf_token';
             csrfTokenInput.value = '{{ form.csrf_token._value() }}';
             form.appendChild(csrfTokenInput);
+            
+            // Add the username field
+            var usernameInput = document.createElement('input');
+            usernameInput.type = 'hidden';
+            usernameInput.name = 'username';
+            usernameInput.value = username;
+            form.appendChild(usernameInput);
             
             document.body.appendChild(form);
             form.submit();
@@ -110,9 +123,10 @@
     }
 
     .button-container {
-    display: flex;
-    margin-bottom: 20px;
-}
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
 
     .button-container button {
         width: 200px;

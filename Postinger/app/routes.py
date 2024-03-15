@@ -169,7 +169,7 @@ def home_page():
     return render_template('home.html', posts=posts, create_post_form=create_post_form, 
                            edit_post_form=edit_post_form,
                            order_by=order_by, order_direction=order_direction,
-                           search_query=search_query, tag_search=tag_search)
+                           search_query=search_query, tag_search=tag_search, user=current_user)
 
 
 @app.route('/create_post', methods=['GET', 'POST'])
@@ -189,14 +189,14 @@ def create_post():
         db.session.commit()
         flash('Post created successfully!', category='success')
         return redirect(url_for('home_page'))
-    return render_template('create_post.html', form=form)
+    return render_template('create_post.html', form=form, user=current_user)
 
 
 @app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.owned_user != current_user:
+    if post.owned_user != current_user and not current_user.is_admin:
         abort(403)
     form = EditPostForm(obj=post)
     if form.validate_on_submit():
@@ -209,7 +209,7 @@ def edit_post(post_id):
         db.session.commit()
         flash('Post updated successfully!', category='success')
         return redirect(url_for('home_page'))
-    return render_template('edit_post.html', form=form)
+    return render_template('edit_post.html', form=form, user=current_user)
 
 
 @app.route('/delete_post/<int:post_id>', methods=['POST', 'DELETE'])
@@ -217,7 +217,7 @@ def edit_post(post_id):
 def delete_post(post_id):
     if request.method in ['POST', 'DELETE']:
         post = Post.query.get_or_404(post_id)
-        if post.owned_user != current_user:
+        if not current_user.is_admin and post.owned_user != current_user:
             abort(403)
         db.session.delete(post)
         db.session.commit()
@@ -275,31 +275,59 @@ def dislike_post():
     return redirect(request.referrer)
 
 
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile/<username>', methods=['GET', 'POST'])
 @login_required
-def profile_page():
-    form = ProfileForm(obj=current_user)
-    if form.validate_on_submit():
-        form.populate_obj(current_user)
-        db.session.commit()
-        flash('Profile updated successfully!', category='success')
-        return redirect(url_for('home_page'))
+def profile_page(username):
+    user_to_edit = User.query.filter_by(username=username).first_or_404()
+
+    can_edit = False
+    can_delete = False
     
-    if form.errors:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(error, 'danger')
+    form = ProfileForm(obj=user_to_edit)
     
-    return render_template('profile.html', user=current_user, form=form)
+    if form.validate_on_submit() and (current_user == user_to_edit or current_user.is_admin):
+        if User.query.filter_by(username=form.username.data).first() and form.username.data != user_to_edit.username:
+            flash('Username already exists and belongs to another user', 'danger')
+        else:
+            form.populate_obj(user_to_edit)
+            db.session.commit()
+            flash('Profile updated successfully!', category='success')
+            return redirect(url_for('home_page'))
+
+    is_own_profile = (user_to_edit == current_user)
+    can_delete = (current_user.is_admin and not is_own_profile) or (not current_user.is_admin and is_own_profile)
+    can_edit = is_own_profile or current_user.is_admin
+
+    return render_template('profile.html', user=user_to_edit, form=form, can_edit=can_edit, can_delete=can_delete)
 
 
 @app.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    db.session.delete(current_user)
+    if current_user.is_admin:
+        username = request.form.get('username')
+        user_to_delete = User.query.filter_by(username=username).first()
+
+        if not user_to_delete:
+            flash('User not found!', 'danger')
+            return redirect(url_for('home_page'))
+
+        if current_user == user_to_delete or user_to_delete.is_admin:
+            flash('You cannot delete an admin account!', 'danger')
+            return redirect(url_for('home_page'))
+
+        db.session.delete(user_to_delete)
+        flash(f'Account of {user_to_delete.username} deleted successfully!', 'success')
+    else:
+        if 'username' in request.form:
+            flash('You do not have enough privileges to delete another user\'s account!', 'danger')
+            return redirect(url_for('home_page'))
+
+        db.session.delete(current_user)
+        flash('Your account has been successfully deleted.', 'success')
+
     db.session.commit()
     logout_user()
-    flash('Your account has been successfully deleted.', 'success')
     return redirect(url_for('login_page'))
 
 
