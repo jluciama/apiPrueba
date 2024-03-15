@@ -19,6 +19,7 @@ def root():
     else:
         return redirect(url_for('login_page'))
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if current_user.is_authenticated:
@@ -26,14 +27,37 @@ def login_page():
         return redirect(url_for('home_page'))
     
     form = LoginForm()
+
     if form.validate_on_submit():
         attempted_user = User.query.filter_by(username=form.username.data).first()
-        if attempted_user and attempted_user.check_password(form.password.data):
-            login_user(attempted_user)
-            flash(f'Success! You are now logged in as: {attempted_user.username}', category='success')
-            return redirect(url_for('home_page'))
-        flash('There was an error logging in. Please try again.', category='danger')
+        if attempted_user:
+            if attempted_user.check_password(form.password.data):
+                if attempted_user.status == 'deactivated':
+                    return render_template('login.html', form=form, reactivate=True, user_id=attempted_user.id)
+                else:
+                    login_user(attempted_user)
+                    flash(f'You are now logged in as: {attempted_user.username}', category='success')
+                    return redirect(url_for('home_page'))
+            else:
+                flash('Incorrect password. Please try again.', category='danger')
+        else:
+            flash('User does not exist. Please check your username.', category='danger')
+    
     return render_template('login.html', form=form)
+
+@app.route('/reactivate_account', methods=['POST'])
+def reactivate_account():
+    user_id = request.form.get('user_id')
+    user = User.query.get(user_id)
+    if user:
+        user.reactivate()
+        db.session.commit()
+        flash('Your account has been reactivated. Welcome back!', category='success')
+        login_user(user)
+        return redirect(url_for('home_page'))
+    else:
+        flash('Failed to reactivate account. Please try again.', category='danger')
+    return redirect(url_for('login_page'))
 
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -304,30 +328,55 @@ def profile_page(username):
 @app.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    if current_user.is_admin:
-        username = request.form.get('username')
-        user_to_delete = User.query.filter_by(username=username).first()
+    action = request.form.get('action')
+    username = request.form.get('username')
+    
+    if action not in ['delete', 'deactivate']:
+        flash('Invalid action requested.', 'danger')
+        return redirect(url_for('home_page'))
+    
+    if action == 'delete':
+        if current_user.is_admin:
+            user_to_delete = User.query.filter_by(username=username).first()
 
-        if not user_to_delete:
+            if not user_to_delete:
+                flash('User not found!', 'danger')
+                return redirect(url_for('home_page'))
+
+            if user_to_delete.is_admin:
+                flash('You cannot delete an admin account!', 'danger')
+                return redirect(url_for('home_page'))
+
+            db.session.delete(user_to_delete)
+            db.session.commit()  # Commit the deletion
+            flash(f'{user_to_delete.username}\'s account was successfully deleted!', 'success')
+        else:
+            if current_user.username != username:
+                flash('You do not have enough privileges to delete another user\'s account!', 'danger')
+                return redirect(url_for('home_page'))
+
+            db.session.delete(current_user)
+            db.session.commit()
+            flash('Your account has been successfully deleted.', 'success')
+            logout_user()
+    elif action == 'deactivate':
+        user_to_deactivate = User.query.filter_by(username=username).first()
+
+        if not user_to_deactivate:
             flash('User not found!', 'danger')
             return redirect(url_for('home_page'))
 
-        if current_user == user_to_delete or user_to_delete.is_admin:
-            flash('You cannot delete an admin account!', 'danger')
+        if current_user.username != username:
+            flash('You do not have enough privileges to deactivate another user\'s account!', 'danger')
             return redirect(url_for('home_page'))
 
-        db.session.delete(user_to_delete)
-        flash(f'Account of {user_to_delete.username} deleted successfully!', 'success')
-    else:
-        if 'username' in request.form:
-            flash('You do not have enough privileges to delete another user\'s account!', 'danger')
-            return redirect(url_for('home_page'))
+        user_to_deactivate.status = 'deactivated'
+        db.session.commit()
+        flash('User account has been deactivated.', 'info')
 
-        db.session.delete(current_user)
-        flash('Your account has been successfully deleted.', 'success')
+        if current_user == user_to_deactivate:
+            logout_user()
 
-    db.session.commit()
-    logout_user()
     return redirect(url_for('login_page'))
 
 

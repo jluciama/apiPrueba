@@ -57,31 +57,49 @@
 
 <script>
     function confirmDelete(username) {
-        var confirmDelete = confirm('Are you sure you want to delete this account?');
+        var confirmDelete = confirm('Are you sure you want to delete or deactivate this account?\n\nChoose "OK" to delete the account or "Cancel" to deactivate the account.');
         
         if (confirmDelete) {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/delete_account';
-            
-            // Add the CSRF token
-            var csrfTokenInput = document.createElement('input');
-            csrfTokenInput.type = 'hidden';
-            csrfTokenInput.name = 'csrf_token';
-            csrfTokenInput.value = '{{ form.csrf_token._value() }}';
-            form.appendChild(csrfTokenInput);
-            
-            // Add the username field
-            var usernameInput = document.createElement('input');
-            usernameInput.type = 'hidden';
-            usernameInput.name = 'username';
-            usernameInput.value = username;
-            form.appendChild(usernameInput);
-            
-            document.body.appendChild(form);
-            form.submit();
+            var action = prompt('Please choose the action you want to perform:\n\nType "delete" to permanently delete the account or "deactivate" to deactivate the account.', '');
+
+            if (action === null) {
+                // User clicked cancel
+                return;
+            }
+
+            action = action.trim().toLowerCase();
+
+            if (action === 'delete' || action === 'deactivate') {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/delete_account';
+                
+                var csrfTokenInput = document.createElement('input');
+                csrfTokenInput.type = 'hidden';
+                csrfTokenInput.name = 'csrf_token';
+                csrfTokenInput.value = '{{ form.csrf_token._value() }}';
+                form.appendChild(csrfTokenInput);
+                
+                var usernameInput = document.createElement('input');
+                usernameInput.type = 'hidden';
+                usernameInput.name = 'username';
+                usernameInput.value = username;
+                form.appendChild(usernameInput);
+                
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = action;
+                form.appendChild(actionInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            } else {
+                alert('Invalid action. Please choose either "delete" or "deactivate".');
+            }
         }
     }
+
     function clearField(fieldId) {
         var field = document.getElementById(fieldId);
         if (field.value === '' || field.value === 'null') {

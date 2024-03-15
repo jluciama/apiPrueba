@@ -30,6 +30,16 @@ class User(db.Model, UserMixin):
     bio = db.Column(db.Text)
     is_admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='owned_user', lazy=True)
+    status = db.Column(db.String, default='active')
+
+    def deactivate(self):
+        self.status = 'deactivated'
+
+    def reactivate(self):
+        self.status = 'active'
+
+    def delete(self):
+        self.status = 'deleted'
 
     def set_password(self, plain_text_password):
         self.password_hash = bcrypt.generate_password_hash(plain_text_password).decode('utf-8')

@@ -8,18 +8,16 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <form method="POST" action="{{ url_for('login_page') }}" class="form-register" style="color:white;">
+                <form method="POST" action="{{ url_for('login_page') }}" class="form-register" style="color:white;" id="login_form">
                     {{ form.hidden_tag() }}
-                    <h1 class="h1 mb-3 font-weight-bold">
-                        LOGIN
-                    </h1>
+                    <h1 class="h1 mb-3 font-weight-bold">LOGIN</h1>
                     <br>
                     <div class="form-group">
-                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username") }}
+                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username", value=username) }}
                     </div>
 
                     <div class="form-group">
-                        {{ form.password(class="form-control rounded-pill text-center", placeholder="Password") }}
+                        {{ form.password(class="form-control rounded-pill text-center", placeholder="Password", value=password) }}
                     </div>
 
                     <div style="margin-bottom: 20px;"></div>
@@ -35,6 +33,24 @@
             </div>
         </div>
     </div>
+
+    {% if reactivate %}
+    <div class="container" id="reactivate_alert">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger mt-3" role="alert">
+                    Your account is currently deactivated.
+                    <form method="POST" action="{{ url_for('reactivate_account') }}">
+                        <input type="hidden" name="user_id" value="{{ user_id }}">
+                        <button type="submit" class="btn btn-success btn-sm">Reactivate Account</button>
+                        <a href="{{ url_for('login_page') }}" class="btn btn-secondary btn-sm">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </body>
 
 <style>
@@ -54,5 +70,12 @@
         margin: auto;
     }
 </style>
+
+<script>
+    // Reset username and password fields when page is refreshed
+    window.onload = function() {
+        document.getElementById("login_form").reset();
+    };
+</script>
 
 {% endblock %}
