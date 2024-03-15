@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import or_, func
+from sqlalchemy.orm import joinedload
 
 
 @login_manager.user_loader
@@ -162,7 +163,7 @@ def home_page():
     order_by = request.args.get('order_by', 'date')
     order_direction = request.args.get('order_direction', 'desc')  # Default to descending order
 
-    posts_query = Post.query
+    posts_query = Post.query.join(User).options(joinedload(Post.owned_user))
 
     if search_query:
         posts_query = posts_query.filter(or_(Post.title.contains(search_query), Post.body.contains(search_query)))
@@ -187,6 +188,9 @@ def home_page():
         posts_query = posts_query.order_by(Post.likes_count.desc() if order_direction == 'desc' else Post.likes_count.asc())
     elif order_by == 'dislikes':
         posts_query = posts_query.order_by(Post.dislikes_count.desc() if order_direction == 'desc' else Post.dislikes_count.asc())
+
+    # Filter posts by the status of their associated user
+    posts_query = posts_query.filter(User.status == 'active')
 
     posts = posts_query.paginate(page=page, per_page=per_page)
 
@@ -336,8 +340,8 @@ def delete_account():
         return redirect(url_for('home_page'))
     
     if action == 'delete':
+        user_to_delete = User.query.filter_by(username=username).first()
         if current_user.is_admin:
-            user_to_delete = User.query.filter_by(username=username).first()
 
             if not user_to_delete:
                 flash('User not found!', 'danger')
@@ -348,8 +352,9 @@ def delete_account():
                 return redirect(url_for('home_page'))
 
             db.session.delete(user_to_delete)
-            db.session.commit()  # Commit the deletion
+            db.session.commit()
             flash(f'{user_to_delete.username}\'s account was successfully deleted!', 'success')
+            return redirect(url_for('home_page'))
         else:
             if current_user.username != username:
                 flash('You do not have enough privileges to delete another user\'s account!', 'danger')
@@ -359,22 +364,30 @@ def delete_account():
             db.session.commit()
             flash('Your account has been successfully deleted.', 'success')
             logout_user()
+
     elif action == 'deactivate':
         user_to_deactivate = User.query.filter_by(username=username).first()
+        if current_user.is_admin:
 
-        if not user_to_deactivate:
-            flash('User not found!', 'danger')
+            if not user_to_deactivate:
+                flash('User not found!', 'danger')
+                return redirect(url_for('home_page'))
+
+            if user_to_deactivate.is_admin:
+                flash('You cannot deactivate an admin account!', 'danger')
+                return redirect(url_for('home_page'))
+            user_to_deactivate.deactivate()
+            db.session.commit()
+            flash(f'{user_to_deactivate.username}\'s account was successfully deactivated!', 'success')
             return redirect(url_for('home_page'))
+        else:
+            if current_user.username != username:
+                flash('You do not have enough privileges to deactivate another user\'s account!', 'danger')
+                return redirect(url_for('home_page'))
 
-        if current_user.username != username:
-            flash('You do not have enough privileges to deactivate another user\'s account!', 'danger')
-            return redirect(url_for('home_page'))
-
-        user_to_deactivate.status = 'deactivated'
-        db.session.commit()
-        flash('User account has been deactivated.', 'info')
-
-        if current_user == user_to_deactivate:
+            user_to_deactivate.deactivate()
+            db.session.commit()
+            flash('Your account has been successfully deactivated.', 'success')
             logout_user()
 
     return redirect(url_for('login_page'))
