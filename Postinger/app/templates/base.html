@@ -33,7 +33,7 @@
                 <span class="nav-link" style="color: rgb(105, 179, 210); font-weight: bold;">Welcome, {{ current_user.name }}</span>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% if current_user.is_admin %}{{ url_for('profile_page', username=current_user.username) }}{% else %}{{ url_for('profile_page', username=user.username) }}{% endif %}">Profile</a>
+                <a class="nav-link" href="{{ url_for('profile_page', username=current_user.username)}}">Profile</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('logout_page') }}">Logout</a>

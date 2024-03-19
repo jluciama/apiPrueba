@@ -19,23 +19,23 @@
                     </h1>
                     <br>
                     <div class="form-group">
-                        {{ form.name(class="form-control rounded-pill text-center", placeholder="Name", id="name") }}
+                        {{ form.name(class="form-control rounded-pill text-center", placeholder="Name", id="name", readonly=not can_edit) }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username", id="username") }}
+                        {{ form.username(class="form-control rounded-pill text-center", placeholder="Username", id="username", readonly=not can_edit) }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.gender(class="form-control rounded-pill text-center", placeholder="Gender", id="gender") }}
+                        {{ form.gender(class="form-control rounded-pill text-center", placeholder="Gender", id="gender", readonly=not can_edit) }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.pronouns(class="form-control rounded-pill text-center", placeholder="Pronouns", id="pronouns") }}
+                        {{ form.pronouns(class="form-control rounded-pill text-center", placeholder="Pronouns", id="pronouns", readonly=not can_edit) }}
                     </div>
                     
                     <div class="form-group">
-                        {{ form.bio(class="form-control rounded-pill text-center", placeholder="Bio", id="bio") }}
+                        {{ form.bio(class="form-control rounded-pill text-center", placeholder="Bio", id="bio", readonly=not can_edit) }}
                     </div>                                
 
                     <div style="margin-bottom: 20px;"></div>

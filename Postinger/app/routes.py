@@ -1,11 +1,14 @@
 from app import app, db, login_manager
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from app.models import User, Post
+from app.forms import RegisterDTO, LoginDTO, ForgotPasswordDTO, CreatePostDTO, EditPostDTO, AgeCheckDTO, ProfileDTO
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
+from pydantic import ValidationError
+import re
 
 
 @login_manager.user_loader
@@ -30,21 +33,20 @@ def login_page():
     form = LoginForm()
 
     if form.validate_on_submit():
-        attempted_user = User.query.filter_by(username=form.username.data).first()
-        if attempted_user:
-            if attempted_user.check_password(form.password.data):
-                if attempted_user.status == 'deactivated':
-                    return render_template('login.html', form=form, reactivate=True, user_id=attempted_user.id)
-                else:
-                    login_user(attempted_user)
-                    flash(f'You are now logged in as: {attempted_user.username}', category='success')
-                    return redirect(url_for('home_page'))
+        login_data = LoginDTO(username=form.username.data, password=form.password.data)
+        try:
+            attempted_user = User.query.filter_by(username=login_data.username).first()
+            if attempted_user and attempted_user.check_password(login_data.password) and attempted_user.status != 'deactivated':
+                login_user(attempted_user)
+                flash(f'You are now logged in as: {attempted_user.username}', category='success')
+                return redirect(url_for('home_page'))
             else:
-                flash('Incorrect password. Please try again.', category='danger')
-        else:
-            flash('User does not exist. Please check your username.', category='danger')
+                flash('Error logging in. Please check your credentials and try again.', category='danger')
+        except ValidationError as e:
+            flash(str(e), 'danger')
     
     return render_template('login.html', form=form)
+
 
 @app.route('/reactivate_account', methods=['POST'])
 def reactivate_account():
@@ -65,18 +67,20 @@ def reactivate_account():
 def forgot_password():
     form = ForgotPasswordForm()
     if form.validate_on_submit():
-        username = form.username.data
-        email = form.email.data
-        new_password = form.password1.data
-
-        user = User.query.filter_by(username=username, email_address=email).first()
-        if user:
-            user.set_password(new_password)
-            db.session.commit()
-            flash('Password has been reset successfully.', 'success')
-            return redirect(url_for('login_page'))
-        else:
-            flash('User with provided credentials does not exist.', 'danger')
+        forgot_password_data = ForgotPasswordDTO(username=form.username.data, email=form.email.data,
+                                                 password1=form.password1.data, password2=form.password2.data)
+        try:
+            user = User.query.filter_by(username=forgot_password_data.username,
+                                        email_address=forgot_password_data.email).first()
+            if user:
+                user.set_password(forgot_password_data.password1)
+                db.session.commit()
+                flash('Password has been reset successfully.', 'success')
+                return redirect(url_for('login_page'))
+            else:
+                flash('User with provided credentials does not exist.', 'danger')
+        except ValidationError as e:
+            flash(str(e), 'danger')
     
     if form.errors:
         for field, errors in form.errors.items():
@@ -94,23 +98,19 @@ def register_page():
     
     form = RegisterForm()
     if form.validate_on_submit():
-        username = form.username.data
-        email = form.email_address.data
-        password = form.password1.data
-        
+        register_data = RegisterDTO(username=form.username.data, email_address=form.email_address.data,
+                                    password1=form.password1.data, password2=form.password2.data)
         try:
-            user = User(username=username, email_address=email)
-            user.set_password(password)
-            user.name = username
+            user = User(username=register_data.username, email_address=register_data.email_address)
+            user.set_password(register_data.password1)
+            user.name = register_data.username
             db.session.add(user)
             db.session.commit()
             login_user(user)
             flash('Registration successful!', 'success')
             return redirect(url_for('home_page'))
-        except Exception as e:
-            flash('An unexpected error occurred. Please try again later.', 'danger')
-            app.logger.error(f"Error while registering user: {str(e)}")
-            return render_template('register.html', form=form)
+        except ValidationError as e:
+            flash(str(e), 'danger')
 
     if form.errors:
         for field, errors in form.errors.items():
@@ -124,21 +124,25 @@ def register_page():
 def age_check_page():
     form = AgeCheckForm()
     if form.validate_on_submit():
-        date_of_birth = form.date_of_birth.data
-        today = datetime.now().date()
+        age_check_data = AgeCheckDTO(date_of_birth=form.date_of_birth.data)
+        try:
+            date_of_birth = age_check_data.date_of_birth
+            today = datetime.now().date()
 
-        if date_of_birth > today:
-            flash("Please enter a valid date of birth.", category='danger')
-        else:
-            provided_age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
-
-            if provided_age < 18:
-                flash("You must be 18 or older to join our network!", category='danger')
-            elif provided_age >= 100:
-                flash("You must be younger than 100 years old to join our network!", category='danger')
+            if date_of_birth > today:
+                flash("Please enter a valid date of birth.", category='danger')
             else:
-                flash("Welcome! Please register.", category='info')
-                return redirect(url_for('register_page'))
+                provided_age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+
+                if provided_age < 18:
+                    flash("You must be 18 or older to join our network!", category='danger')
+                elif provided_age >= 100:
+                    flash("You must be younger than 100 years old to join our network!", category='danger')
+                else:
+                    flash("Welcome! Please register.", category='info')
+                    return redirect(url_for('register_page'))
+        except ValidationError as e:
+            flash(str(e), 'danger')
 
     if form.errors:
         for field, errors in form.errors.items():
@@ -204,19 +208,28 @@ def home_page():
 @login_required
 def create_post():
     form = CreatePostForm()
-    if form.validate_on_submit():
-        new_post = Post(
-            title=form.title.data,
-            body=form.body.data,
-            owned_user=current_user
-        )
-        tags = [tag.strip() for tag in form.tags.data.split('#') if tag.strip()]
-        new_post.tags = ','.join(tags)
 
-        db.session.add(new_post)
-        db.session.commit()
-        flash('Post created successfully!', category='success')
-        return redirect(url_for('home_page'))
+    if form.validate_on_submit():
+        create_post_data = CreatePostDTO(title=form.title.data, body=form.body.data, tags=form.tags.data)
+        try:
+            tags = set(tag.strip() for tag in re.split(r'[,\s]+', request.form.get('tags')) if tag.strip())
+            tags_str = ', '.join(tags)
+            
+            new_post = Post(
+                title=create_post_data.title,
+                body=create_post_data.body,
+                tags=tags_str,
+                owned_user_id=current_user.id,
+                created_at=datetime.now()
+            )
+            db.session.add(new_post)
+            db.session.commit()
+
+            flash('Post created successfully!', category='success')
+            return redirect(url_for('home_page'))
+        except ValidationError as e:
+            flash(str(e), 'danger')
+
     return render_template('create_post.html', form=form, user=current_user)
 
 
@@ -226,17 +239,25 @@ def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
     if post.owned_user != current_user and not current_user.is_admin:
         abort(403)
+    
     form = EditPostForm(obj=post)
+    
     if form.validate_on_submit():
-        form.populate_obj(post)
-        
-        if form.tags.data:
-            tags = [tag.strip() for tag in form.tags.data.split('#') if tag.strip()]
-            post.tags = ','.join(tags)
-        
-        db.session.commit()
-        flash('Post updated successfully!', category='success')
-        return redirect(url_for('home_page'))
+        edit_post_data = EditPostDTO(title=form.title.data, body=form.body.data, tags=form.tags.data)
+        try:
+            tags = set(tag.strip() for tag in re.split(r'[,\s]+', request.form.get('tags')) if tag.strip())
+            tags_str = ', '.join(tags)
+            
+            post.title = edit_post_data.title
+            post.body = edit_post_data.body
+            post.tags = tags_str
+            db.session.commit()
+            
+            flash('Post updated successfully!', category='success')
+            return redirect(url_for('home_page'))
+        except ValidationError as e:
+            flash(str(e), 'danger')
+
     return render_template('edit_post.html', form=form, user=current_user)
 
 
@@ -258,7 +279,12 @@ def delete_post(post_id):
 @app.route('/like_post', methods=['POST'])
 @login_required
 def like_post():
-    post_id = request.form.get('post_id')
+    try:
+        post_id = int(request.form.get('post_id'))
+    except ValueError:
+        flash('Invalid post ID.', 'danger')
+        return redirect(request.referrer)
+
     post = Post.query.get_or_404(post_id)
     user = current_user
 
@@ -282,7 +308,12 @@ def like_post():
 @app.route('/dislike_post', methods=['POST'])
 @login_required
 def dislike_post():
-    post_id = request.form.get('post_id')
+    try:
+        post_id = int(request.form.get('post_id'))
+    except ValueError:
+        flash('Invalid post ID.', 'danger')
+        return redirect(request.referrer)
+
     post = Post.query.get_or_404(post_id)
     user = current_user
 
@@ -314,13 +345,17 @@ def profile_page(username):
     form = ProfileForm(obj=user_to_edit)
     
     if form.validate_on_submit() and (current_user == user_to_edit or current_user.is_admin):
-        if User.query.filter_by(username=form.username.data).first() and form.username.data != user_to_edit.username:
-            flash('Username already exists and belongs to another user', 'danger')
-        else:
-            form.populate_obj(user_to_edit)
-            db.session.commit()
-            flash('Profile updated successfully!', category='success')
-            return redirect(url_for('home_page'))
+        profile_data = ProfileDTO(**form.data)
+        try:
+            if User.query.filter_by(username=profile_data.username).first() and profile_data.username != user_to_edit.username:
+                flash('Username already exists and belongs to another user', 'danger')
+            else:
+                form.populate_obj(user_to_edit)
+                db.session.commit()
+                flash('Profile updated successfully!', category='success')
+                return redirect(url_for('home_page'))
+        except ValidationError as e:
+            flash(str(e), 'danger')
 
     is_own_profile = (user_to_edit == current_user)
     can_delete = (current_user.is_admin and not is_own_profile) or (not current_user.is_admin and is_own_profile)
@@ -397,5 +432,5 @@ def delete_account():
 @login_required
 def logout_page():
     logout_user()
-    flash("You have been logged out!", category='info')
-    return redirect(url_for("login_page"))
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login_page'))

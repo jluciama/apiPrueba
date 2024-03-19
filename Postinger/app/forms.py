@@ -1,42 +1,90 @@
-from app.models import User
-from datetime import datetime
-from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, DateField
-from wtforms.validators import DataRequired, Email, ValidationError
+from wtforms.validators import DataRequired, Email, ValidationError, Length
 import re
+from pydantic import BaseModel, EmailStr
+from datetime import date, datetime
+from typing import List, Optional
+from app.models import User
+
+
+# DTO FORMS
+
+class RegisterDTO(BaseModel):
+    username: str
+    email_address: EmailStr
+    password1: str
+    password2: str
+
+
+class LoginDTO(BaseModel):
+    username: str
+    password: str
+
+
+class ForgotPasswordDTO(BaseModel):
+    username: str
+    email: EmailStr
+    password1: str
+    password2: str
+
+
+class CreatePostDTO(BaseModel):
+    title: str
+    body: str
+    tags: Optional[List[str]] = []
+
+
+class EditPostDTO(BaseModel):
+    title: str
+    body: str
+    tags: Optional[List[str]] = []
+
+
+class AgeCheckDTO(BaseModel):
+    date_of_birth: date
+
+
+class ProfileDTO(BaseModel):
+    name: str = None
+    username: str
+    gender: str = None
+    pronouns: str = None
+    bio: str = None
+
+
+
+# FLASKFORMS
+
+def password_strength(form, field):
+    password = field.data
+
+    if len(password) < 6:
+        raise ValidationError('Password must be at least 6 characters long.')
+
+    if not (re.search(r'[A-Z]', password) and
+            re.search(r'[a-z]', password) and
+            re.search(r'[0-9]', password) and
+            re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password)):
+        raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired(), Length(min=1, max=25)])
     email_address = StringField('Email', validators=[DataRequired(), Email()])
-    password1 = PasswordField('Password', validators=[DataRequired()])
-    password2 = PasswordField('Confirm Password', validators=[DataRequired()])
+    password1 = PasswordField('Password', validators=[DataRequired(), password_strength])
+    password2 = PasswordField('Confirm Password', validators=[DataRequired(), Length(min=6)])
     submit = SubmitField('Register')
 
     def validate_username(self, username):
         user = User.query.filter_by(username=username.data).first()
         if user:
             raise ValidationError('Username already registered. Please choose a different one.')
-        elif len(username.data) < 1 or len(username.data) > 25:
-            raise ValidationError('Usernames must have between 1 and 25 characters.')
 
     def validate_email_address(self, email_address):
         user = User.query.filter_by(email_address=email_address.data).first()
         if user:
             raise ValidationError('Email already registered. Please use a different one.')
-
-    def validate_password1(self, password1):
-        password = password1.data
-
-        if len(password) < 6:
-            raise ValidationError('Password must be at least 6 characters long.')
-
-        if not (re.search(r'[A-Z]', password) and
-                re.search(r'[a-z]', password) and
-                re.search(r'[0-9]', password) and
-                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password)):
-            raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
 
     def validate_password2(self, password2):
         if self.password1.data != password2.data:
@@ -52,7 +100,7 @@ class LoginForm(FlaskForm):
 class ForgotPasswordForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password1 = PasswordField('New Password', validators=[DataRequired()])
+    password1 = PasswordField('New Password', validators=[DataRequired(), password_strength])
     password2 = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Reset Password')
 
@@ -69,18 +117,6 @@ class ForgotPasswordForm(FlaskForm):
         if not user:
             raise ValidationError('User with provided email does not exist.')
 
-    def validate_password1(self, password1_field):
-        password = password1_field.data
-
-        if len(password) < 6:
-            raise ValidationError('Password must be at least 6 characters long.')
-
-        if not (re.search(r'[A-Z]', password) and
-                re.search(r'[a-z]', password) and
-                re.search(r'[0-9]', password) and
-                re.search(r'[!@#$%^&*()\-_=+{};:,<.>]', password)):
-            raise ValidationError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol.')
-
     def validate_password2(self, password2_field):
         if self.password1.data != password2_field.data:
             raise ValidationError('Passwords do not match.')
@@ -88,7 +124,7 @@ class ForgotPasswordForm(FlaskForm):
 
 class CreatePostForm(FlaskForm):
     title = StringField(label='Title', validators=[DataRequired()])
-    body = StringField(label='Body', validators=[DataRequired()])
+    body = TextAreaField(label='Body', validators=[DataRequired()])
     tags = StringField('Tags (optional)')
     submit = SubmitField(label='Create a post!')
 
@@ -121,5 +157,5 @@ class ProfileForm(FlaskForm):
     username = StringField(label='Username:', validators=[DataRequired()])
     gender = StringField(label='Gender:')
     pronouns = StringField(label='Pronouns:')
-    bio = StringField(label='Bio:')
-    submit = SubmitField(label='Save your changes!')
+    bio = TextAreaField(label='Bio:')
+    submit = SubmitField(label='Update')
