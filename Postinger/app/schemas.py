@@ -32,13 +32,13 @@ class ForgotPasswordDTO(BaseModel):
 class CreatePostDTO(BaseModel):
     title: str
     body: str
-    tags: Optional[List[str]] = []
+    tags: str
 
 
 class EditPostDTO(BaseModel):
     title: str
     body: str
-    tags: Optional[List[str]] = []
+    tags: str
 
 
 class AgeCheckDTO(BaseModel):

@@ -1,7 +1,7 @@
 from app import app, db, login_manager
-from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
+from app.schemas import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from app.models import User, Post
-from app.forms import RegisterDTO, LoginDTO, ForgotPasswordDTO, CreatePostDTO, EditPostDTO, AgeCheckDTO, ProfileDTO
+from app.schemas import RegisterDTO, LoginDTO, ForgotPasswordDTO, CreatePostDTO, EditPostDTO, AgeCheckDTO, ProfileDTO
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
@@ -193,7 +193,6 @@ def home_page():
     elif order_by == 'dislikes':
         posts_query = posts_query.order_by(Post.dislikes_count.desc() if order_direction == 'desc' else Post.dislikes_count.asc())
 
-    # Filter posts by the status of their associated user
     posts_query = posts_query.filter(User.status == 'active')
 
     posts = posts_query.paginate(page=page, per_page=per_page)
@@ -224,7 +223,6 @@ def create_post():
             )
             db.session.add(new_post)
             db.session.commit()
-
             flash('Post created successfully!', category='success')
             return redirect(url_for('home_page'))
         except ValidationError as e:
