@@ -3,7 +3,10 @@ from datetime import datetime
 from flask_login import UserMixin
 
 
-# Association table for followers (los que te siguen).
+
+# DTO MODELS TO SCHEMAS
+# MODELS CANNOT HAVE DEFINITIONS. Deactivate etc go to repos because they handle DB models.
+
 
 # Association table for likes.
 likes = db.Table(
@@ -19,8 +22,6 @@ dislikes = db.Table(
     db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True)
 )
 
-# Association table for comments.
-
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -31,8 +32,6 @@ class User(db.Model, UserMixin):
     gender = db.Column(db.String)
     pronouns = db.Column(db.String)
     bio = db.Column(db.Text)
-    # follower_count = db.Column(db.Integer, default=0)
-    # following_count = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False)
     posts = db.relationship('Post', backref='owned_user', lazy=True)
     status = db.Column(db.String, default='active')
@@ -67,13 +66,12 @@ class Post(db.Model):
     tags = db.Column(db.String)
     likes_count = db.Column(db.Integer, default=0)
     dislikes_count = db.Column(db.Integer, default=0)
-    # comments_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Add comments
 
-    # Define relationships with users for likes, dislikes, and comments
+    # Define relationships with users for likes and dislikes
     liked_users = db.relationship('User', secondary=likes, backref=db.backref('liked_posts', lazy='dynamic'))
     disliked_users = db.relationship('User', secondary=dislikes, backref=db.backref('disliked_posts', lazy='dynamic'))
-    # commented_users = db.relationship('User', secondary=comments, backref=db.backref('commented_posts', lazy='dynamic'))
 
     def __repr__(self):
         return self.title

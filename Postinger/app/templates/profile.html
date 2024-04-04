@@ -17,6 +17,7 @@
                             {{ user.name|upper }}'S PROFILE
                         {% endif %}
                     </h1>
+                    <!-- Add post, follower, and following count. Click on "followers" or "following" and open a menu with all users in those lists -->
                     <br>
                     <div class="form-group">
                         {{ form.name(class="form-control rounded-pill text-center", placeholder="Name", id="name", readonly=not can_edit) }}
@@ -45,7 +46,6 @@
                             <button type="submit" class="btn btn-lg btn-primary btn-register">Save Changes</button>
                         {% endif %}
                         {% if can_delete %}
-                            <!-- Pass the username in the form submission -->
                             <button type="button" class="btn btn-lg btn-danger btn-register" onclick="confirmDelete('{{ user.username }}')">Delete Account</button>
                         {% endif %}
                     </div>
@@ -57,7 +57,7 @@
 
 <script>
     function confirmDelete(username) {
-        var confirmDelete = confirm('Are you sure you want to delete or deactivate this account?\n\nChoose "OK" to delete the account or "Cancel" to deactivate the account.');
+        var confirmDelete = confirm('Are you sure you want to delete or deactivate this account?');
         
         if (confirmDelete) {
             var action = prompt('Please choose the action you want to perform:\n\nType "delete" to permanently delete the account or "deactivate" to deactivate the account.', '');
