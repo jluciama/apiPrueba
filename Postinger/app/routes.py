@@ -2,6 +2,7 @@ from app import app, db, login_manager
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from app.models import User, Post
 from app.forms import RegisterDTO, LoginDTO, ForgotPasswordDTO, CreatePostDTO, EditPostDTO, AgeCheckDTO, ProfileDTO
+from app.repos import user_repo, post_repo
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
@@ -19,74 +20,76 @@ def load_user(user_id):
 @app.route('/')
 def root():
     if current_user.is_authenticated:
+        flash("You are already authenticated!", category='info')
         return redirect(url_for('home_page'))
     else:
         return redirect(url_for('login_page'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login_page():
-    if current_user.is_authenticated:
-        flash("You are already logged in!", category='info')
-        return redirect(url_for('home_page'))
-    
+async def login_page():
     form = LoginForm()
+    reactivate = False
+    username = ""
 
     if form.validate_on_submit():
-        login_data = LoginDTO(username=form.username.data, password=form.password.data)
-        try:
-            attempted_user = User.query.filter_by(username=login_data.username).first()
-            if attempted_user and attempted_user.check_password(login_data.password):
-                if attempted_user.status == 'active':
-                    login_user(attempted_user)
-                    flash(f'You are now logged in as: {attempted_user.username}', category='success')
-                elif attempted_user.status == 'deactivated':
-                    attempted_user.reactivate()
-                return redirect(url_for('home_page'))
-            else:
-                flash('Error logging in. Please check your credentials and try again.', category='danger')
-        except ValidationError as e:
-            flash(str(e), 'danger')
+        username = form.username.data
+        password = form.password.data
+        
+        user = await user_repo.findOne(username)
+        if user:
+            validUser = await user_repo.checkPassword(user, password)
+            if validUser:
+                active = await user_repo.isActive(user)
+                if active:
+                    login_user(user)
+                    flash(f'You are now logged in as: {user.username}', category='success')
+                    return redirect(url_for('home_page'))
+                else:
+                    reactivate = True
+        if not reactivate: flash('Error logging in. Please check your credentials and try again.', category='danger')
     
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, reactivate=reactivate, username=username)
 
 
-@app.route('/reactivate_account', methods=['POST'])
-def reactivate_account():
-    user_id = request.form.get('user_id')
-    user = User.query.get(user_id)
+@app.route('/reactivate_account/<username>', methods=['GET', 'POST'])
+async def reactivate_account(username):
+    user = await user_repo.findOne(username)
     if user:
-        user.reactivate()
-        db.session.commit()
-        flash('Your account has been reactivated. Welcome back!', category='success')
-        login_user(user)
-        return redirect(url_for('home_page'))
-    else:
-        flash('Failed to reactivate account. Please try again.', category='danger')
+        reactivateOk = await user_repo.reactivate(user)
+        if reactivateOk:
+            flash('Your account has been reactivated. Welcome back!', category='success')
+            login_user(user)
+            return redirect(url_for('home_page'))
+    flash('Failed to reactivate account. Please try again.', category='danger')
+    
     return redirect(url_for('login_page'))
 
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
-def forgot_password():
+async def forgot_password():
     form = ForgotPasswordForm()
+    username = form.username
+    email = user.email
+    password = form.password1
+
     if form.validate_on_submit():
-        forgot_password_data = ForgotPasswordDTO(username=form.username.data, email=form.email.data,
-                                                 password1=form.password1.data, password2=form.password2.data)
         try:
-            user = User.query.filter_by(username=forgot_password_data.username,
-                                        email_address=forgot_password_data.email).first()
+            user = await user_repo.findOne(username)
             if user:
-                user.set_password(forgot_password_data.password1)
-                db.session.commit()
-                flash('Password has been reset successfully.', 'success')
-                return redirect(url_for('login_page'))
+                validEmail = await user_repo.checkEmail(user, email)
+                if validEmail:
+                    passwordChanged = await user_repo.setPassword(user, password)
+                    if passwordChanged:
+                        flash('Password has been reset successfully.', 'success')
+                        return redirect(url_for('login_page'))
             else:
                 flash('User with provided credentials does not exist.', 'danger')
         except ValidationError as e:
             flash(str(e), 'danger')
     
     if form.errors:
-        for field, errors in form.errors.items():
+        for _, errors in form.errors.items():
             for error in errors:
                 flash(error, 'danger')
 

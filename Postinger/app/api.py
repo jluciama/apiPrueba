@@ -1,6 +1,5 @@
 # api = routes = controllers. Es decir, lo que hace el usuario. 
 # cuando le da a register en la pagina web (front), le lleva a la ruta /register (back)
-# importamos todas las clases del final de repos
 
 # @api.route('/register')
 # class RegisterRoute():
@@ -10,10 +9,11 @@
 
 # Si el usuario no es admin e intenta borrar, saltar excepcion de permisos
 
-from app import app, db, login_manager
+from app import app, login_manager
 from app.forms import RegisterForm, LoginForm, CreatePostForm, EditPostForm, ForgotPasswordForm, ProfileForm, AgeCheckForm
 from app.models import User, Post
 from app.forms import RegisterDTO, LoginDTO, ForgotPasswordDTO, CreatePostDTO, EditPostDTO, AgeCheckDTO, ProfileDTO
+from app.repos import user_repo, post_repo
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
@@ -24,17 +24,22 @@ from repos import user_repo
 import re
 
 
+"""@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
 @app.route('/')
 def root():
     if current_user.is_authenticated:
         flash("You are already authenticated!", category='info')
         return redirect(url_for('home_page'))
     else:
-        return redirect(url_for('login_page'))
+        return redirect(url_for('LoginRoute'))
 
 
 @app.route('/login')
-class LoginRoute():
+class LoginRoute:
 
     async def get(self):
         form = LoginForm()
@@ -50,7 +55,7 @@ class LoginRoute():
                     return redirect(url_for('home_page'))
             flash('Error logging in. Please check your credentials and try again.', category='danger')
         
-        return render_template('login.html')
+        return render_template('login.html', form=form)
     
     async def patch(self): # add patch logic to login html
         username = "" # change this to extract username from login form
@@ -60,7 +65,7 @@ class LoginRoute():
             return redirect(url_for('home_page'))
 
 
-"""@app.route('/forgot_password')
+@app.route('/forgot_password')
 class ForgotPasswordRoute():
 
     async def get(self):

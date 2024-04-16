@@ -36,27 +36,6 @@ class User(db.Model, UserMixin):
     posts = db.relationship('Post', backref='owned_user', lazy=True)
     status = db.Column(db.String, default='active')
 
-    def deactivate(self):
-        self.status = 'deactivated'
-        for post in self.posts:
-            post.status = 'deactivated'
-
-    def reactivate(self):
-        self.status = 'active'
-        for post in self.posts:
-            post.status = 'active'
-
-    def delete(self):
-        self.status = 'deleted'
-        for post in self.posts:
-            db.session.delete(post)
-
-    def set_password(self, plain_text_password):
-        self.password_hash = bcrypt.generate_password_hash(plain_text_password).decode('utf-8')
-
-    def check_password(self, attempted_password):
-        return bcrypt.check_password_hash(self.password_hash, attempted_password)
-
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
