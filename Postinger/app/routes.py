@@ -70,7 +70,7 @@ async def reactivate_account(username):
 async def forgot_password():
     form = ForgotPasswordForm()
     username = form.username
-    email = user.email
+    email = form.email
     password = form.password1
 
     if form.validate_on_submit():
@@ -98,21 +98,19 @@ async def forgot_password():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register_page():
-    if current_user.is_authenticated:
-        flash("Already authenticated!")
-        return redirect(url_for('home_page'))
-    
     form = RegisterForm()
+    username = form.username
+    email = form.email_address
+    password = form.password1
+    # hasta aqui hemos llegado
     if form.validate_on_submit():
-        register_data = RegisterDTO(username=form.username.data, email_address=form.email_address.data,
-                                    password1=form.password1.data, password2=form.password2.data)
         try:
-            user = User(username=register_data.username, email_address=register_data.email_address)
-            user.set_password(register_data.password1)
-            user.name = register_data.username
-            db.session.add(user)
-            db.session.commit()
-            login_user(user)
+            # user = User(username=register_data.username, email_address=register_data.email_address)
+            # user.set_password(register_data.password1)
+            # user.name = register_data.username
+            # db.session.add(user)
+            # db.session.commit()
+            # login_user(user)
             flash('Registration successful!', 'success')
             return redirect(url_for('home_page'))
         except ValidationError as e:
